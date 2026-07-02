@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="A dynamic training schedule dashboard.">
-    <title>Diglians Schedule</title>
+    <title>Digilians Schedule</title>
     <link rel="stylesheet" href="index.css">
     <!-- Load SheetJS for Excel Parsing -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -15,21 +15,16 @@
         
         <div class="card filters-section" id="filters-section" style="display: none;">
             <div class="filter-group">
+                <label for="filter-date"><strong>Date:</strong></label>
+                <input type="date" id="filter-date" style="padding: 8px 15px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 15px; outline: none; cursor: pointer;">
+
                 <label for="filter-track"><strong>Track:</strong></label>
                 <select id="filter-track">
                     <option value="All">All Tracks</option>
                 </select>
-
-                <label for="filter-week"><strong>Week:</strong></label>
-                <select id="filter-week">
-                    <option value="All">All Weeks</option>
-                </select>
-                
-                <label for="filter-day"><strong>Day:</strong></label>
-                <select id="filter-day">
-                    <option value="All">All Days</option>
-                </select>
             </div>
+            
+            <div id="active-date-display" style="text-align: center; margin-top: 25px; color: #2980b9; font-weight: bold; font-size: 18px; padding-bottom: 10px; border-bottom: 2px solid #e1f0fa;"></div>
         </div>
 
         <div id="schedule-container">
@@ -38,12 +33,12 @@
             </p>
         </div>
         
-        <!-- Optional fallback for local files
+        <!-- Optional fallback for local files -->
         <div class="upload-section" style="margin-top: 50px; text-align: center;">
             <hr>
             <label for="upload-excel" style="font-size: 13px; color: #7f8c8d; cursor: pointer;">Fallback: Upload Local Schedule (.xlsx): </label>
             <input type="file" id="upload-excel" accept=".xlsx, .xls" style="font-size: 13px;" />
-        </div> -->
+        </div>
     </main>
 
     <script src="index.js"></script>
