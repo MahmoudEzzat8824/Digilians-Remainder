@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A dynamic and complex training schedule table.">
+    <title>Complex Schedule Table</title>
+    <link rel="stylesheet" href="index.css">
+    <!-- Load SheetJS for Excel Parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <style>
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            background-color: #5b9bd5;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn:hover { background-color: #4178a8; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .btn:disabled { background-color: #ccc; cursor: not-allowed; transform: none; box-shadow: none; }
+        
+        .upload-section {
+            margin-bottom: 30px; 
+            text-align: center; 
+            padding: 25px; 
+            background-color: #fff; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1 style="text-align: center; margin-bottom: 30px; color: #2c3e50; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">Live Training Schedules</h1>
+        
+        <div class="upload-section">
+            <h3 style="margin-top: 0; margin-bottom: 20px; color: #34495e;">Fetch from Google Sheets</h3>
+            <div class="btn-group">
+                <button class="btn" id="btn-data-analysis">Data Analysis</button>
+                <button class="btn" id="btn-media-production">Media Production</button>
+                <button class="btn" id="btn-innov-prompt">INNOV/PROMPT</button>
+                <button class="btn" id="btn-coaching">Coaching</button>
+            </div>
+            
+            <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eaeaea;">
+            
+            <label for="upload-excel" style="font-weight: bold; font-size: 14px; color: #7f8c8d; display: block; margin-bottom: 10px;">Or Upload Local Schedule (.xlsx / .xls): </label>
+            <input type="file" id="upload-excel" accept=".xlsx, .xls" style="font-size: 14px;" />
+        </div>
+        
+        <div id="table-container">
+            <p style="text-align: center; color: #7f8c8d; font-style: italic; font-size: 16px;">Select a schedule above to dynamically load and view it...</p>
+        </div>
+    </main>
+
+    <script src="index.js"></script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+body {
+    padding: 20px;
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #f4f4f9;
+}
+
+#table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    background-color: #fff;
+}
+
+.schedule-table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 800px; /* Forces scrolling on small screens instead of squishing */
+    text-align: center;
+    font-size: 14px;
+    background-color: #ffffff;
+}
+
+.schedule-table th, .schedule-table td {
+    border: 1px solid black;
+    padding: 4px;
+    vertical-align: middle;
+    height: 25px;
+}
+
+.bold { font-weight: bold; }
+.black-divider td { background-color: #000; height: 12px; border: 2px solid black; }
+
+/* Color Mapping from Image */
+.bg-grey { background-color: #d9d9d9; }
+.bg-dark-grey { background-color: #b7b7b7; }
+.bg-blue { background-color: #5b9bd5; }
+.bg-light-blue { background-color: #9fc5e8; }
+.bg-cyan { background-color: #00ffff; }
+.bg-orange { background-color: #f6b26b; }
+.bg-green { background-color: #b6d7a8; }
+.bg-yellow { background-color: #ffff00; }
+.bg-red { background-color: #ff0000; }
+.bg-purple { background-color: #b47a9b; }
+.bg-white { background-color: #ffffff; }
+
+/* Mobile Enhancements */
+@media (max-width: 768px) {
+    body { padding: 10px; }
+    h1 { font-size: 1.5em; }
+    .schedule-table th, .schedule-table td { padding: 6px; font-size: 13px; }
+}
