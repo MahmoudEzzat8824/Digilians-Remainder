@@ -1,6 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     const uploadInput = document.getElementById('upload-excel');
-    const tableContainer = document.getElementById('table-container');
+    const scheduleContainer = document.getElementById('schedule-container');
+    const filtersSection = document.getElementById('filters-section');
+    const filterWeek = document.getElementById('filter-week');
+    const filterDay = document.getElementById('filter-day');
+
+    let allSessions = [];
 
     // Document IDs mapped from your shared links
     const sheets = {
@@ -10,39 +15,163 @@ document.addEventListener('DOMContentLoaded', () => {
         'btn-coaching': '1RbOVAhasXMrAMMtxzpfyUfoYSAjxeC1intzYEbEMP5I'
     };
 
-    // Helper to dynamically remove empty bounds from the worksheet before rendering
-    function trimWorksheet(ws) {
-        if (!ws || !ws['!ref']) return;
-        const range = XLSX.utils.decode_range(ws['!ref']);
-        let maxRow = range.s.r, maxCol = range.s.c;
+    // Advanced Parser: Converts the pivoted Excel visual table into a structured JSON array of sessions
+    function parseToSessions(rows) {
+        if (!rows || rows.length < 5) return [];
+
+        let sessions = [];
+        const weekHeaders = rows[2] || [];
+        const dayHeaders = rows[3] || [];
+        const typeHeaders = rows[4] || []; 
+
+        let weekMap = {};
+        let currentWeek = "Week 1";
         
-        for (let R = range.s.r; R <= range.e.r; ++R) {
-            for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cell = ws[XLSX.utils.encode_cell({r: R, c: C})];
-                if (cell && cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== "") {
-                    if (R > maxRow) maxRow = R;
-                    if (C > maxCol) maxCol = C;
+        let dayMap = {};
+        let currentDay = "Unknown Day";
+        
+        let maxCols = Math.max(weekHeaders.length, dayHeaders.length, typeHeaders.length);
+
+        // Pass 1: Dynamically map every column index to its corresponding Week and Day
+        for (let c = 1; c < maxCols; c++) {
+            if (weekHeaders[c] && typeof weekHeaders[c] === 'string' && weekHeaders[c].toLowerCase().includes('week')) {
+                currentWeek = weekHeaders[c].trim();
+            }
+            if (dayHeaders[c] && String(dayHeaders[c]).trim() !== "") {
+                currentDay = String(dayHeaders[c]).trim();
+            }
+            weekMap[c] = currentWeek;
+            dayMap[c] = currentDay;
+        }
+
+        let currentCategory = "General";
+        let currentTrainer = "Unknown";
+
+        // Pass 2: Iterate vertically through the trainers/categories
+        for (let r = 5; r < rows.length; r++) {
+            const row = rows[r];
+            if (!row || row.length === 0) continue;
+            
+            // If column 0 is populated, detect if it's a Category header or a Trainer name
+            if (row[0]) {
+                let hasData = false;
+                for (let c = 1; c < row.length; c++) {
+                    if (row[c]) { hasData = true; break; }
+                }
+                // Categories usually have no horizontal schedule data in the same row
+                if (!hasData) {
+                    currentCategory = String(row[0]).trim();
+                    currentTrainer = "Unknown";
+                } else {
+                    currentTrainer = String(row[0]).trim();
+                }
+            }
+            
+            // Pass 3: Extract time and lab pairs horizontally
+            for (let c = 1; c < row.length; c++) {
+                if (typeHeaders[c] && String(typeHeaders[c]).toLowerCase().includes("time")) {
+                    let time = row[c];
+                    
+                    // Look ahead for the corresponding Lab column
+                    let labCol = c + 1;
+                    while (labCol < row.length && (!typeHeaders[labCol] || !String(typeHeaders[labCol]).toLowerCase().includes("lab"))) {
+                        labCol++;
+                    }
+                    
+                    let lab = row[labCol];
+                    
+                    if (time && lab && String(time).trim() !== "") {
+                        sessions.push({
+                            week: weekMap[c] || "Unknown Week",
+                            day: dayMap[c] || "Unknown Day",
+                            time: String(time).trim(),
+                            lab: String(lab).trim(),
+                            trainer: currentTrainer,
+                            category: currentCategory
+                        });
+                    }
                 }
             }
         }
-        
-        // Ensure merges don't get cut off
-        if (ws['!merges']) {
-            ws['!merges'].forEach(merge => {
-                if (merge.s.r <= maxRow && merge.s.c <= maxCol) {
-                    if (merge.e.r > maxRow) maxRow = merge.e.r;
-                    if (merge.e.c > maxCol) maxCol = merge.e.c;
-                }
-            });
-        }
-        
-        ws['!ref'] = XLSX.utils.encode_range({
-            s: {r: range.s.r, c: range.s.c},
-            e: {r: maxRow, c: maxCol}
-        });
+        return sessions;
     }
 
-    // Helper to render the table using SheetJS
+    // Populate the dropdown filters based on exactly what exists in the parsed data
+    function updateFilterOptions() {
+        // Extract unique, sorted weeks and days
+        const weeks = [...new Set(allSessions.map(s => s.week))].filter(Boolean);
+        // Standard sort for days
+        const dayOrder = { "Saturday":1, "Sunday":2, "Monday":3, "Tuesday":4, "Wednesday":5, "Thursday":6, "Friday":7 };
+        const days = [...new Set(allSessions.map(s => s.day))].filter(Boolean).sort((a,b) => (dayOrder[a]||99) - (dayOrder[b]||99));
+
+        filterWeek.innerHTML = '<option value="All">All Weeks</option>';
+        weeks.forEach(w => {
+            filterWeek.innerHTML += \`<option value="\${w}">\${w}</option>\`;
+        });
+
+        filterDay.innerHTML = '<option value="All">All Days</option>';
+        days.forEach(d => {
+            filterDay.innerHTML += \`<option value="\${d}">\${d}</option>\`;
+        });
+        
+        // Show the filter bar
+        filtersSection.style.display = 'block';
+    }
+
+    // Main render engine: filters and groups data into Cards
+    function renderGroupedSchedule() {
+        const selectedWeek = filterWeek.value;
+        const selectedDay = filterDay.value;
+
+        // Apply filters
+        let filtered = allSessions.filter(s => {
+            return (selectedWeek === 'All' || s.week === selectedWeek) &&
+                   (selectedDay === 'All' || s.day === selectedDay);
+        });
+
+        if (filtered.length === 0) {
+            scheduleContainer.innerHTML = '<p class="placeholder">No sessions found for the selected filters.</p>';
+            return;
+        }
+
+        // Group by Week, then Day
+        const grouped = {};
+        filtered.forEach(s => {
+            if (!grouped[s.week]) grouped[s.week] = {};
+            if (!grouped[s.week][s.day]) grouped[s.week][s.day] = [];
+            grouped[s.week][s.day].push(s);
+        });
+
+        let html = '';
+        for (const week in grouped) {
+            html += \`<div class="week-group"><h2 class="week-title">\${week}</h2>\`;
+            for (const day in grouped[week]) {
+                html += \`<div class="day-group"><h3 class="day-title">\${day}</h3>\`;
+                html += \`<div class="session-cards">\`;
+                
+                grouped[week][day].forEach(session => {
+                    html += \`
+                        <div class="session-card">
+                            <div class="time-badge">🕒 \${session.time}</div>
+                            <div class="session-detail"><strong>Category:</strong> \${session.category}</div>
+                            <div class="session-detail"><strong>Instructor:</strong> \${session.trainer}</div>
+                            <div class="session-detail"><strong>Lab:</strong> \${session.lab}</div>
+                        </div>
+                    \`;
+                });
+                
+                html += \`</div></div>\`;
+            }
+            html += \`</div>\`;
+        }
+
+        scheduleContainer.innerHTML = html;
+    }
+
+    // Attach listeners to dropdowns
+    filterWeek.addEventListener('change', renderGroupedSchedule);
+    filterDay.addEventListener('change', renderGroupedSchedule);
+
     function renderExcelData(dataBuffer) {
         try {
             const data = new Uint8Array(dataBuffer);
@@ -51,95 +180,63 @@ document.addEventListener('DOMContentLoaded', () => {
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             
-            // Trim empty trailing rows and columns
-            trimWorksheet(worksheet);
+            // Convert to a raw 2D array matrix
+            const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
             
-            let htmlString = XLSX.utils.sheet_to_html(worksheet);
+            // Run the advanced parser
+            allSessions = parseToSessions(rows);
             
-            // Inject our styling classes into the generated table
-            htmlString = htmlString.replace('<table', '<table class="schedule-table"');
+            if (allSessions.length === 0) {
+                scheduleContainer.innerHTML = '<p class="placeholder" style="color: red;">Could not find structured session data inside this sheet.</p>';
+                return;
+            }
             
-            // Post-process table to dynamically color cells based on content
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlString;
-            const cells = tempDiv.querySelectorAll('td, th');
+            // Setup filters and perform initial render
+            updateFilterOptions();
+            renderGroupedSchedule();
             
-            const colorMap = {};
-            const pastelColors = ['#ffb3ba', '#ffdfba', '#ffffba', '#baffc9', '#bae1ff', '#e6b3ff', '#ffb3e6', '#c4faf8', '#f2c6de', '#fce2c4'];
-            let colorIndex = 0;
-
-            cells.forEach(cell => {
-                const text = cell.textContent.trim();
-                if (!text) return;
-                
-                // Color Logic based on text content
-                if (text.match(/LAB/i)) {
-                    cell.style.backgroundColor = '#baffc9'; // light green
-                    cell.style.fontWeight = 'bold';
-                } else if (text.match(/^M[1-9]/i) || text.toLowerCase() === 'model') {
-                    cell.style.backgroundColor = '#bae1ff'; // light blue
-                } else if (text.match(/^[0-9]{1,2}:[0-9]{2}/)) {
-                    cell.style.backgroundColor = '#ffffba'; // light yellow
-                } else if (text.length > 2) {
-                    // Assign consistent distinct color to Trainers and Headers
-                    if (!colorMap[text]) {
-                        colorMap[text] = pastelColors[colorIndex % pastelColors.length];
-                        colorIndex++;
-                    }
-                    cell.style.backgroundColor = colorMap[text];
-                    cell.style.fontWeight = 'bold';
-                    cell.style.color = '#333';
-                }
-            });
-            
-            tableContainer.innerHTML = tempDiv.innerHTML;
         } catch (error) {
             console.error("Error parsing Excel data:", error);
-            tableContainer.innerHTML = '<p style="text-align: center; color: red; font-weight: bold;">Error parsing file. Please ensure it is a valid Excel document.</p>';
+            scheduleContainer.innerHTML = '<p class="placeholder" style="color: red;">Error parsing file. Please ensure it is a valid schedule document.</p>';
         }
     }
 
-    // Attach click events to the Google Sheet buttons
+    // Attach click events to the Google Sheet fetch buttons
     Object.keys(sheets).forEach(btnId => {
         const btn = document.getElementById(btnId);
         if(!btn) return;
 
         btn.addEventListener('click', async () => {
             const sheetId = sheets[btnId];
-            tableContainer.innerHTML = '<p style="text-align: center; font-weight: bold; color: #5b9bd5;">Fetching live data from Google Sheets...</p>';
+            scheduleContainer.innerHTML = '<p class="placeholder" style="color: #5b9bd5;">Fetching live data from Google Sheets...</p>';
+            filtersSection.style.display = 'none'; // hide filters while loading
             
-            // Disable all buttons during the fetch
             const allBtns = document.querySelectorAll('.btn');
             allBtns.forEach(b => b.disabled = true);
             
             try {
-                // Fetch the sheet as an xlsx export natively supported by Google Docs
                 const url = "https://docs.google.com/spreadsheets/d/" + sheetId + "/export?format=xlsx";
                 const response = await fetch(url);
-                
-                if (!response.ok) {
-                    throw new Error("Network response was not ok");
-                }
+                if (!response.ok) throw new Error("Network response was not ok");
                 
                 const arrayBuffer = await response.arrayBuffer();
                 renderExcelData(arrayBuffer);
             } catch (error) {
-                console.error("Fetch error:", error);
-                tableContainer.innerHTML = '<p style="text-align: center; color: red; font-weight: bold;">Failed to fetch the schedule. Please ensure you have internet access and the link is active.</p>';
+                scheduleContainer.innerHTML = '<p class="placeholder" style="color: red;">Failed to fetch the schedule. Ensure the link is active.</p>';
             } finally {
-                // Re-enable buttons once done
                 allBtns.forEach(b => b.disabled = false);
             }
         });
     });
 
-    // Local file upload handling
+    // Local file upload handling fallback
     if(uploadInput) {
         uploadInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            tableContainer.innerHTML = '<p style="text-align: center; font-weight: bold; color: #5b9bd5;">Processing local Excel file...</p>';
+            scheduleContainer.innerHTML = '<p class="placeholder" style="color: #5b9bd5;">Processing local Excel file...</p>';
+            filtersSection.style.display = 'none';
 
             const reader = new FileReader();
             reader.onload = function(e) {
