@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="A dynamic training schedule dashboard.">
-    <title>Dynamic Schedule Dashboard</title>
+    <title>Diglians Schedule</title>
     <link rel="stylesheet" href="index.css">
     <!-- Load SheetJS for Excel Parsing -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -13,24 +13,13 @@
     <main>
         <h1>Live Training Schedules</h1>
         
-        <div class="card upload-section">
-            <h3>Fetch from Google Sheets</h3>
-            <div class="btn-group">
-                <button class="btn" id="btn-data-analysis">Data Analysis</button>
-                <button class="btn" id="btn-media-production">Media Production</button>
-                <button class="btn" id="btn-innov-prompt">INNOV/PROMPT</button>
-                <button class="btn" id="btn-coaching">Coaching</button>
-            </div>
-            
-            <hr>
-            
-            <label for="upload-excel" style="font-weight: bold; font-size: 14px; color: #7f8c8d; display: block; margin-bottom: 10px;">Or Upload Local Schedule (.xlsx): </label>
-            <input type="file" id="upload-excel" accept=".xlsx, .xls" style="font-size: 14px;" />
-        </div>
-        
         <div class="card filters-section" id="filters-section" style="display: none;">
-            <h3>Filter Schedule</h3>
             <div class="filter-group">
+                <label for="filter-track"><strong>Track:</strong></label>
+                <select id="filter-track">
+                    <option value="All">All Tracks</option>
+                </select>
+
                 <label for="filter-week"><strong>Week:</strong></label>
                 <select id="filter-week">
                     <option value="All">All Weeks</option>
@@ -44,8 +33,17 @@
         </div>
 
         <div id="schedule-container">
-            <p class="placeholder">Select a schedule above to dynamically load and view it...</p>
+            <p class="placeholder" style="color: #5b9bd5; font-weight: bold; font-size: 18px; margin-top: 50px;">
+                Loading all live schedules... Please wait.
+            </p>
         </div>
+        
+        <!-- Optional fallback for local files
+        <div class="upload-section" style="margin-top: 50px; text-align: center;">
+            <hr>
+            <label for="upload-excel" style="font-size: 13px; color: #7f8c8d; cursor: pointer;">Fallback: Upload Local Schedule (.xlsx): </label>
+            <input type="file" id="upload-excel" accept=".xlsx, .xls" style="font-size: 13px;" />
+        </div> -->
     </main>
 
     <script src="index.js"></script>
