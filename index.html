@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A dynamic training schedule dashboard.">
+    <title>Digilians Schedule</title>
+    <link rel="stylesheet" href="index.css">
+    <!-- Load SheetJS for Excel Parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <main>
+        <h1>Live Training Schedules</h1>
+        
+        <div class="card filters-section" id="filters-section" style="display: none;">
+            <div class="filter-group">
+                <label for="filter-date"><strong>Date:</strong></label>
+                <input type="date" id="filter-date" style="padding: 8px 15px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 15px; outline: none; cursor: pointer;">
+
+                <label for="filter-track"><strong>Track:</strong></label>
+                <select id="filter-track">
+                    <option value="All">All Tracks</option>
+                </select>
+            </div>
+            
+            <div id="active-date-display" style="text-align: center; margin-top: 25px; color: #2980b9; font-weight: bold; font-size: 18px; padding-bottom: 10px; border-bottom: 2px solid #e1f0fa;"></div>
+        </div>
+
+        <div id="schedule-container">
+            <p class="placeholder" style="color: #5b9bd5; font-weight: bold; font-size: 18px; margin-top: 50px;">
+                Loading all live schedules... Please wait.
+            </p>
+        </div>
+    </main>
+
+    <script src="index.js"></script>
+</body>
+</html>

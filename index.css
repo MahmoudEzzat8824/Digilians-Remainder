@@ -1,0 +1,150 @@
+body {
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f6f9;
+    color: #333;
+    margin: 0;
+}
+
+main {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+h1 {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 30px;
+}
+
+.card {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    margin-bottom: 25px;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid #eaeaea;
+    margin: 25px 0;
+}
+
+.placeholder {
+    text-align: center;
+    color: #7f8c8d;
+    font-style: italic;
+    font-size: 16px;
+    margin-top: 40px;
+}
+
+/* Filters */
+.filter-group {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-group select {
+    padding: 8px 15px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    font-size: 15px;
+    outline: none;
+    cursor: pointer;
+}
+
+.filter-group select:focus {
+    border-color: #5b9bd5;
+}
+
+/* Grouped Schedule View (Tables) */
+.week-group {
+    margin-bottom: 50px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.week-title {
+    color: #2c3e50;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 10px;
+    margin-top: 0;
+    margin-bottom: 25px;
+    font-size: 1.8em;
+}
+
+.day-group {
+    margin-bottom: 35px;
+}
+
+.day-title {
+    color: #e67e22;
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.4em;
+    padding-left: 10px;
+    border-left: 5px solid #f39c12;
+}
+
+/* Table View Styles */
+.session-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.session-table th, .session-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.session-table th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+}
+
+.session-table tr:last-child td {
+    border-bottom: none;
+}
+
+.session-table tr:hover {
+    background-color: #f1f5f9;
+}
+
+.time-col {
+    font-weight: bold;
+    color: #2980b9;
+    white-space: nowrap;
+}
+
+.track-badge {
+    background: #fff3cd;
+    color: #856404;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Mobile Enhancements */
+@media (max-width: 768px) {
+    body { padding: 10px; }
+    .filter-group { flex-direction: column; gap: 15px; width: 100%; }
+    .filter-group select { width: 100%; }
+    .session-table th, .session-table td { padding: 10px; font-size: 13px; }
+}
