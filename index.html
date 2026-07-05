@@ -15,6 +15,11 @@
         
         <div class="card filters-section" id="filters-section" style="display: none;">
             <div class="filter-group">
+                <div class="filter-item filter-search-item">
+                    <label for="filter-search"><strong>Search:</strong></label>
+                    <input type="text" id="filter-search" placeholder="Instructor or lab name">
+                </div>
+
                 <div class="filter-item">
                     <label for="filter-instructor"><strong>Instructor:</strong></label>
                     <select id="filter-instructor">
@@ -45,9 +50,23 @@
                         <option value="All">All Tracks</option>
                     </select>
                 </div>
+
+                <div class="filter-actions">
+                    <button type="button" id="clear-filters-btn">Clear Filters</button>
+                    <button type="button" id="export-csv-btn">Export CSV</button>
+                    <button type="button" id="export-xlsx-btn">Export Excel</button>
+                </div>
             </div>
             
             <div id="active-date-display" style="text-align: center; margin-top: 25px; color: #2980b9; font-weight: bold; font-size: 18px; padding-bottom: 10px; border-bottom: 2px solid #e1f0fa;"></div>
+        </div>
+
+        <div class="card summary-section" id="summary-section" style="display: none;">
+            <div class="summary-header">
+                <h2>Schedule Summary</h2>
+                <div class="summary-count" id="results-count">0 sessions</div>
+            </div>
+            <div class="summary-body" id="summary-body"></div>
         </div>
 
         <div id="schedule-container">
