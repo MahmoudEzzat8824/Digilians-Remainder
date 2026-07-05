@@ -16,8 +16,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const summarySection = document.getElementById('summary-section');
     const summaryBody = document.getElementById('summary-body');
     const resultsCount = document.getElementById('results-count');
+    const reminderSection = document.getElementById('reminder-section');
+    const reminderBody = document.getElementById('reminder-body');
+    const reminderCount = document.getElementById('reminder-count');
 
     let allSessions = [];
+
+    const instructorEmailMap = {
+        // Example:
+        // 'Instructor Name': 'instructor@example.com'
+    };
 
     function formatDateForInput(date) {
         const tzOffset = date.getTimezoneOffset() * 60000;
@@ -214,6 +222,95 @@ document.addEventListener('DOMContentLoaded', () => {
         return searchableText.includes(normalizeText(searchText));
     }
 
+    function groupSessionsByInstructor(occurrences) {
+        const grouped = new Map();
+
+        occurrences.forEach(occurrence => {
+            const instructor = occurrence.trainer || 'Unknown';
+            if (!grouped.has(instructor)) {
+                grouped.set(instructor, []);
+            }
+            grouped.get(instructor).push(occurrence);
+        });
+
+        return [...grouped.entries()].map(([instructor, sessions]) => ({
+            instructor,
+            email: instructorEmailMap[instructor] || '',
+            sessions: sessions.sort((a, b) => {
+                const dateA = a.dateStr.localeCompare(b.dateStr);
+                if (dateA !== 0) return dateA;
+                return a.time.localeCompare(b.time);
+            })
+        }));
+    }
+
+    function buildReminderBody(instructorName, sessions) {
+        const lines = sessions.map(session => {
+            return `${session.formattedDate} (${session.day}) - ${session.time} | ${session.track} | ${session.lab} | ${session.category}`;
+        });
+
+        const intro = `Hello ${instructorName},\n\nThis is a reminder of your upcoming sessions:\n\n`;
+        const outro = `\nPlease let me know if any changes are needed.\n\nBest regards,`;
+        return intro + lines.join('\n') + outro;
+    }
+
+    function openReminderEmail(instructorName, sessions) {
+        const email = instructorEmailMap[instructorName];
+        const subject = encodeURIComponent(`Reminder: Upcoming sessions for ${instructorName}`);
+        const body = encodeURIComponent(buildReminderBody(instructorName, sessions));
+
+        if (!email) {
+            alert(`Add an email address for ${instructorName} in instructorEmailMap inside index.js to enable sending.`);
+            return;
+        }
+
+        window.location.href = `mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`;
+    }
+
+    function renderReminderPanel(occurrences) {
+        if (!reminderSection || !reminderBody || !reminderCount) return;
+
+        const grouped = groupSessionsByInstructor(occurrences);
+        reminderCount.textContent = `${grouped.length} instructor${grouped.length === 1 ? '' : 's'}`;
+
+        if (grouped.length === 0) {
+            reminderBody.innerHTML = '<p class="placeholder">No instructors available for reminders with the current filters.</p>';
+            reminderSection.style.display = 'block';
+            return;
+        }
+
+        reminderBody.innerHTML = grouped.map(group => {
+            const sessionList = group.sessions.map(session => `
+                <li>${session.formattedDate} - ${session.time} | ${session.track} | ${session.lab}</li>
+            `).join('');
+
+            const buttonLabel = group.email ? 'Compose Email' : 'Add Email Address';
+
+            return `
+                <div class="reminder-card">
+                    <div class="reminder-card-header">
+                        <div>
+                            <h3>${group.instructor}</h3>
+                            <p>${group.sessions.length} upcoming session${group.sessions.length === 1 ? '' : 's'}</p>
+                        </div>
+                        <button type="button" class="reminder-button" data-instructor="${group.instructor}">${buttonLabel}</button>
+                    </div>
+                    <ul class="reminder-list">${sessionList}</ul>
+                </div>
+            `;
+        }).join('');
+
+        reminderSection.style.display = 'block';
+
+        reminderBody.querySelectorAll('.reminder-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const instructorName = button.getAttribute('data-instructor');
+                const group = grouped.find(item => item.instructor === instructorName);
+                if (group) openReminderEmail(group.instructor, group.sessions);
+            });
+        });
+    }
+
     function getScheduleOccurrences(overrideFilters = {}) {
         const filters = { ...getActiveFilters(), ...overrideFilters };
         const selectedDates = getDatesInRange(filters.fromDate, filters.toDate);
@@ -367,6 +464,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (resultsCount) {
             resultsCount.textContent = `${occurrences.length} session${occurrences.length === 1 ? '' : 's'}`;
         }
+
+        renderReminderPanel(occurrences);
 
         if (summarySection && summaryBody) {
             const uniqueDays = [...new Set(selectedDates.map(dateStr => getScheduleWeekAndDay(dateStr).day).filter(Boolean))];
