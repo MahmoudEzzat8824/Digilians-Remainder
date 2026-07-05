@@ -6,9 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterInstructor = document.getElementById('filter-instructor');
     const filterLab = document.getElementById('filter-lab');
     const filterTrack = document.getElementById('filter-track');
+    const filterSearch = document.getElementById('filter-search');
     const filterDateFrom = document.getElementById('filter-date-from');
     const filterDateTo = document.getElementById('filter-date-to');
+    const clearFiltersBtn = document.getElementById('clear-filters-btn');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    const exportXlsxBtn = document.getElementById('export-xlsx-btn');
     const activeDateDisplay = document.getElementById('active-date-display');
+    const summarySection = document.getElementById('summary-section');
+    const summaryBody = document.getElementById('summary-body');
+    const resultsCount = document.getElementById('results-count');
 
     let allSessions = [];
 
@@ -23,6 +30,76 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (filterDateFrom) filterDateFrom.value = todayValue;
         if (filterDateTo) filterDateTo.value = todayValue;
+    }
+
+    function getTodayValue() {
+        return formatDateForInput(new Date());
+    }
+
+    function normalizeText(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function getActiveFilters() {
+        return {
+            track: filterTrack ? filterTrack.value : 'All',
+            instructor: filterInstructor ? filterInstructor.value : 'All',
+            lab: filterLab ? filterLab.value : 'All',
+            search: filterSearch ? filterSearch.value.trim() : '',
+            fromDate: filterDateFrom ? filterDateFrom.value : null,
+            toDate: filterDateTo ? filterDateTo.value : null
+        };
+    }
+
+    function buildUrlFromFilters(filters) {
+        const params = new URLSearchParams();
+        if (filters.track && filters.track !== 'All') params.set('track', filters.track);
+        if (filters.instructor && filters.instructor !== 'All') params.set('instructor', filters.instructor);
+        if (filters.lab && filters.lab !== 'All') params.set('lab', filters.lab);
+        if (filters.search) params.set('search', filters.search);
+        if (filters.fromDate) params.set('from', filters.fromDate);
+        if (filters.toDate) params.set('to', filters.toDate);
+        return params.toString();
+    }
+
+    function syncUrlWithFilters() {
+        const filters = getActiveFilters();
+        const queryString = buildUrlFromFilters(filters);
+        const newUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ''}`;
+        window.history.replaceState({}, '', newUrl);
+    }
+
+    function getFiltersFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        return {
+            track: params.get('track') || 'All',
+            instructor: params.get('instructor') || 'All',
+            lab: params.get('lab') || 'All',
+            search: params.get('search') || '',
+            fromDate: params.get('from') || getTodayValue(),
+            toDate: params.get('to') || getTodayValue()
+        };
+    }
+
+    function applyFilters(filters) {
+        if (filterTrack) filterTrack.value = filters.track || 'All';
+        if (filterInstructor) filterInstructor.value = filters.instructor || 'All';
+        if (filterLab) filterLab.value = filters.lab || 'All';
+        if (filterSearch) filterSearch.value = filters.search || '';
+        if (filterDateFrom) filterDateFrom.value = filters.fromDate || getTodayValue();
+        if (filterDateTo) filterDateTo.value = filters.toDate || getTodayValue();
+    }
+
+    function resetFilters() {
+        applyFilters({
+            track: 'All',
+            instructor: 'All',
+            lab: 'All',
+            search: '',
+            fromDate: getTodayValue(),
+            toDate: getTodayValue()
+        });
+        refreshFiltersAndSchedule();
     }
 
     // Set Date inputs to today's date in local time initially
@@ -129,11 +206,57 @@ document.addEventListener('DOMContentLoaded', () => {
         return sessions;
     }
 
+    function sessionMatchesSearch(session, searchText) {
+        if (!searchText) return true;
+        const searchableText = [session.track, session.trainer, session.lab, session.category, session.time]
+            .map(normalizeText)
+            .join(' ');
+        return searchableText.includes(normalizeText(searchText));
+    }
+
+    function getScheduleOccurrences(overrideFilters = {}) {
+        const filters = { ...getActiveFilters(), ...overrideFilters };
+        const selectedDates = getDatesInRange(filters.fromDate, filters.toDate);
+
+        if (selectedDates.length === 0) {
+            return [];
+        }
+
+        const occurrences = [];
+
+        selectedDates.forEach(dateStr => {
+            const { week, day, formattedDate } = getScheduleWeekAndDay(dateStr);
+            if (!week || !day || day === 'Thursday' || day === 'Friday') return;
+
+            allSessions.forEach(session => {
+                const sheetWeekStr = String(session.week).toLowerCase().replace(/\s/g, '');
+                const targetWeekStr = String(week).toLowerCase().replace(/\s/g, '');
+
+                if ((filters.track === 'All' || session.track === filters.track) &&
+                    (filters.instructor === 'All' || session.trainer === filters.instructor) &&
+                    (filters.lab === 'All' || session.lab === filters.lab) &&
+                    sheetWeekStr === targetWeekStr &&
+                    String(session.day).toLowerCase() === String(day).toLowerCase() &&
+                    sessionMatchesSearch(session, filters.search)) {
+                    occurrences.push({
+                        dateStr,
+                        formattedDate,
+                        week,
+                        day,
+                        ...session
+                    });
+                }
+            });
+        });
+
+        return occurrences;
+    }
+
     function updateFilterOptions() {
         const currentFilters = getActiveFilters();
         const tracks = [...new Set(allSessions.map(s => s.track))].filter(Boolean);
-        const instructors = [...new Set(getVisibleSessions({ instructor: 'All' }).map(s => s.trainer).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-        const labs = [...new Set(getVisibleSessions({ lab: 'All' }).map(s => s.lab).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+        const instructors = [...new Set(getScheduleOccurrences({ instructor: 'All' }).map(s => s.trainer).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+        const labs = [...new Set(getScheduleOccurrences({ lab: 'All' }).map(s => s.lab).filter(Boolean))].sort((a, b) => a.localeCompare(b));
         
         if(filterTrack) {
             filterTrack.innerHTML = '<option value="All">All Tracks</option>';
@@ -163,6 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function refreshFiltersAndSchedule() {
         updateFilterOptions();
         renderGroupedSchedule();
+        syncUrlWithFilters();
     }
 
     function parseDateInput(dateStr) {
@@ -193,46 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return dates;
     }
 
-    function getActiveFilters() {
-        return {
-            track: filterTrack ? filterTrack.value : 'All',
-            instructor: filterInstructor ? filterInstructor.value : 'All',
-            lab: filterLab ? filterLab.value : 'All',
-            fromDate: filterDateFrom ? filterDateFrom.value : null,
-            toDate: filterDateTo ? filterDateTo.value : null
-        };
-    }
-
-    function getVisibleSessions(overrideFilters = {}) {
-        const filters = { ...getActiveFilters(), ...overrideFilters };
-        const selectedDates = getDatesInRange(filters.fromDate, filters.toDate);
-
-        if (selectedDates.length === 0) {
-            return [];
-        }
-
-        const visibleSessions = [];
-
-        selectedDates.forEach(dateStr => {
-            const { week, day } = getScheduleWeekAndDay(dateStr);
-            if (!week || !day || day === 'Thursday' || day === 'Friday') return;
-
-            allSessions.forEach(session => {
-                const sheetWeekStr = String(session.week).toLowerCase().replace(/\s/g, '');
-                const targetWeekStr = String(week).toLowerCase().replace(/\s/g, '');
-
-                if ((filters.track === 'All' || session.track === filters.track) &&
-                    (filters.instructor === 'All' || session.trainer === filters.instructor) &&
-                    (filters.lab === 'All' || session.lab === filters.lab) &&
-                    sheetWeekStr === targetWeekStr &&
-                    String(session.day).toLowerCase() === String(day).toLowerCase()) {
-                    visibleSessions.push(session);
-                }
-            });
-        });
-
-        return visibleSessions;
-    }
 
     // Advanced mathematical logic to project infinite repetitive weeks starting from July 4, 2026
     function getScheduleWeekAndDay(dateStr) {
@@ -266,15 +350,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderGroupedSchedule() {
-        const selectedTrack = filterTrack ? filterTrack.value : 'All';
-        const selectedInstructor = filterInstructor ? filterInstructor.value : 'All';
-        const selectedLab = filterLab ? filterLab.value : 'All';
-        const fromDate = filterDateFrom ? filterDateFrom.value : null;
-        const toDate = filterDateTo ? filterDateTo.value : null;
-
-        const selectedDates = getDatesInRange(fromDate, toDate);
+        const filters = getActiveFilters();
+        const selectedDates = getDatesInRange(filters.fromDate, filters.toDate);
         if (selectedDates.length === 0) return;
 
+        const occurrences = getScheduleOccurrences();
         const rangeStart = selectedDates[0];
         const rangeEnd = selectedDates[selectedDates.length - 1];
 
@@ -282,6 +362,28 @@ document.addEventListener('DOMContentLoaded', () => {
             activeDateDisplay.innerHTML = rangeStart === rangeEnd
                 ? `📅 Showing schedule for ${new Date(rangeStart + 'T00:00:00').toLocaleDateString('en-GB')}`
                 : `📅 Showing schedule from ${new Date(rangeStart + 'T00:00:00').toLocaleDateString('en-GB')} to ${new Date(rangeEnd + 'T00:00:00').toLocaleDateString('en-GB')}`;
+        }
+
+        if (resultsCount) {
+            resultsCount.textContent = `${occurrences.length} session${occurrences.length === 1 ? '' : 's'}`;
+        }
+
+        if (summarySection && summaryBody) {
+            const uniqueDays = [...new Set(selectedDates.map(dateStr => getScheduleWeekAndDay(dateStr).day).filter(Boolean))];
+            const uniqueWeeks = [...new Set(selectedDates.map(dateStr => getScheduleWeekAndDay(dateStr).week).filter(Boolean))];
+            const appliedSearch = filters.search ? filters.search : 'None';
+            summaryBody.innerHTML = `
+                <div class="summary-grid">
+                    <div class="summary-chip">Range: ${new Date(rangeStart + 'T00:00:00').toLocaleDateString('en-GB')} - ${new Date(rangeEnd + 'T00:00:00').toLocaleDateString('en-GB')}</div>
+                    <div class="summary-chip">Weeks: ${uniqueWeeks.join(', ') || 'None'}</div>
+                    <div class="summary-chip">Days: ${uniqueDays.join(', ') || 'None'}</div>
+                    <div class="summary-chip">Track: ${filters.track}</div>
+                    <div class="summary-chip">Instructor: ${filters.instructor}</div>
+                    <div class="summary-chip">Lab: ${filters.lab}</div>
+                    <div class="summary-chip">Search: ${appliedSearch}</div>
+                </div>
+            `;
+            summarySection.style.display = 'block';
         }
 
         const daySections = [];
@@ -300,22 +402,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            let filtered = allSessions.filter(s => {
-                const sheetWeekStr = String(s.week).toLowerCase().replace(/\s/g, '');
-                const targetWeekStr = String(week).toLowerCase().replace(/\s/g, '');
-
-                return (selectedTrack === 'All' || s.track === selectedTrack) &&
-                       (selectedInstructor === 'All' || s.trainer === selectedInstructor) &&
-                       (selectedLab === 'All' || s.lab === selectedLab) &&
-                       (sheetWeekStr === targetWeekStr) &&
-                       (String(s.day).toLowerCase() === String(day).toLowerCase());
-            });
+            let filtered = occurrences.filter(occurrence => occurrence.dateStr === dateStr);
 
             if (filtered.length === 0) {
                 daySections.push(`
                     <div class="day-group">
                         <h3 class="day-title">${formattedDate} - ${day}</h3>
-                        <p class="placeholder">No sessions found for this date and selected filters.</p>
+                        <p class="placeholder">No matching sessions for this date and selected filters.</p>
                     </div>
                 `);
                 return;
@@ -348,10 +441,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 tableHtml += `
                     <tr>
                         <td class="time-col">🕒 ${session.time}</td>
-                        <td><span class="track-badge">${session.track}</span></td>
-                        <td><strong>${session.trainer}</strong></td>
+                        <td><span class="track-badge badge-track">${session.track}</span></td>
+                        <td><span class="instructor-badge">${session.trainer}</span></td>
                         <td>${session.category}</td>
-                        <td>${session.lab}</td>
+                        <td><span class="lab-badge">${session.lab}</span></td>
                     </tr>
                 `;
             });
@@ -367,17 +460,61 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (daySections.length === 0) {
-            scheduleContainer.innerHTML = '<p class="placeholder">No sessions found for the selected date range and filters.</p>';
+            const hasSearch = Boolean(filters.search);
+            scheduleContainer.innerHTML = `<p class="placeholder">${hasSearch ? 'No sessions matched the selected filters and search term.' : 'No sessions found for the selected date range and filters.'}</p>`;
             return;
         }
         scheduleContainer.innerHTML = daySections.join('');
     }
 
+    function exportFilteredSessions(format) {
+        const occurrences = getScheduleOccurrences();
+        if (occurrences.length === 0) return;
+
+        const rows = occurrences.map(occurrence => ({
+            Date: occurrence.formattedDate,
+            Week: occurrence.week,
+            Day: occurrence.day,
+            Time: occurrence.time,
+            Track: occurrence.track,
+            Instructor: occurrence.trainer,
+            Category: occurrence.category,
+            Lab: occurrence.lab
+        }));
+
+        if (format === 'csv') {
+            const headers = Object.keys(rows[0]);
+            const csvRows = [headers.join(',')];
+            rows.forEach(row => {
+                csvRows.push(headers.map(header => `"${String(row[header]).replace(/"/g, '""')}"`).join(','));
+            });
+
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'digilians-schedule.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+            return;
+        }
+
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.json_to_sheet(rows);
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Schedule');
+        XLSX.writeFile(workbook, 'digilians-schedule.xlsx');
+    }
+
     if(filterTrack) filterTrack.addEventListener('change', refreshFiltersAndSchedule);
     if(filterInstructor) filterInstructor.addEventListener('change', refreshFiltersAndSchedule);
     if(filterLab) filterLab.addEventListener('change', refreshFiltersAndSchedule);
+    if(filterSearch) filterSearch.addEventListener('input', refreshFiltersAndSchedule);
     if(filterDateFrom) filterDateFrom.addEventListener('change', refreshFiltersAndSchedule);
     if(filterDateTo) filterDateTo.addEventListener('change', refreshFiltersAndSchedule);
+    if(clearFiltersBtn) clearFiltersBtn.addEventListener('click', resetFilters);
+    if(exportCsvBtn) exportCsvBtn.addEventListener('click', () => exportFilteredSessions('csv'));
+    if(exportXlsxBtn) exportXlsxBtn.addEventListener('click', () => exportFilteredSessions('xlsx'));
 
     // Auto-fetch all data concurrently on page load
     async function fetchAllSchedules() {
@@ -407,6 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
+            applyFilters(getFiltersFromUrl());
             refreshFiltersAndSchedule();
             
         } catch (error) {
@@ -437,7 +575,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
                     
                     allSessions = parseToSessions(rows, "Local Upload");
-                    setDefaultDateRange();
+                    applyFilters({
+                        track: 'All',
+                        instructor: 'All',
+                        lab: 'All',
+                        search: '',
+                        fromDate: getTodayValue(),
+                        toDate: getTodayValue()
+                    });
                     refreshFiltersAndSchedule();
                 } catch(err) {
                     scheduleContainer.innerHTML = '<p class="placeholder" style="color: red;">Error processing local file.</p>';

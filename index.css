@@ -55,8 +55,13 @@ hr {
     min-width: 170px;
 }
 
+.filter-search-item {
+    min-width: 220px;
+}
+
 .filter-group select,
-.filter-group input[type="date"] {
+.filter-group input[type="date"],
+.filter-group input[type="text"] {
     padding: 8px 15px;
     border-radius: 6px;
     border: 1px solid #cbd5e1;
@@ -67,8 +72,80 @@ hr {
 }
 
 .filter-group select:focus,
-.filter-group input[type="date"]:focus {
+.filter-group input[type="date"]:focus,
+.filter-group input[type="text"]:focus {
     border-color: #5b9bd5;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: end;
+}
+
+.filter-actions button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #2c3e50;
+    color: #fff;
+}
+
+.filter-actions button:hover {
+    opacity: 0.92;
+}
+
+.filter-actions button:nth-child(2) {
+    background: #16a085;
+}
+
+.filter-actions button:nth-child(3) {
+    background: #8e44ad;
+}
+
+.summary-section {
+    margin-bottom: 25px;
+}
+
+.summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.summary-header h2 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.2rem;
+}
+
+.summary-count {
+    background: #e8f4fd;
+    color: #1f6ea8;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 999px;
+}
+
+.summary-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.summary-chip {
+    background: #f8fafc;
+    border: 1px solid #dbe4ee;
+    color: #34495e;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 14px;
 }
 
 /* Grouped Schedule View (Tables) */
@@ -143,8 +220,31 @@ hr {
 }
 
 .track-badge {
-    background: #fff3cd;
-    color: #856404;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.badge-track {
+    background: #2c7be5;
+}
+
+.instructor-badge {
+    display: inline-block;
+    background: #1f9d55;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.lab-badge {
+    display: inline-block;
+    background: #8e44ad;
+    color: #fff;
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 12px;
@@ -157,6 +257,10 @@ hr {
     .filter-group { flex-direction: column; gap: 15px; width: 100%; }
     .filter-item { width: 100%; min-width: 0; }
     .filter-group select,
-    .filter-group input[type="date"] { width: 100%; }
+    .filter-group input[type="date"],
+    .filter-group input[type="text"] { width: 100%; }
+    .filter-actions { width: 100%; }
+    .filter-actions button { width: 100%; }
+    .summary-header { align-items: flex-start; }
     .session-table th, .session-table td { padding: 10px; font-size: 13px; }
 }
