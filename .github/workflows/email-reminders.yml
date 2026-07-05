@@ -1,0 +1,39 @@
+name: Send Instructor Email Reminders
+
+on:
+  schedule:
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Log reminders without sending emails'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: read
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Send scheduled reminders
+        env:
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+          CONTACTS_SHEET_URL: ${{ secrets.CONTACTS_SHEET_URL }}
+          INSTRUCTOR_EMAILS_JSON: ${{ secrets.INSTRUCTOR_EMAILS_JSON }}
+          REMINDER_DAYS_AHEAD: '1'
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'false' }}
+        run: node scripts/send-instructor-reminders.mjs
