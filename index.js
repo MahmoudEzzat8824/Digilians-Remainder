@@ -130,13 +130,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateFilterOptions() {
+        const currentFilters = getActiveFilters();
         const tracks = [...new Set(allSessions.map(s => s.track))].filter(Boolean);
-        const instructors = [...new Set(allSessions.map(s => s.trainer).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-        const labs = [...new Set(allSessions.map(s => s.lab).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+        const instructors = [...new Set(getVisibleSessions({ instructor: 'All' }).map(s => s.trainer).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+        const labs = [...new Set(getVisibleSessions({ lab: 'All' }).map(s => s.lab).filter(Boolean))].sort((a, b) => a.localeCompare(b));
         
         if(filterTrack) {
             filterTrack.innerHTML = '<option value="All">All Tracks</option>';
             tracks.forEach(t => { filterTrack.innerHTML += `<option value="${t}">${t}</option>`; });
+            filterTrack.value = currentFilters.track;
         }
 
         if (filterInstructor) {
@@ -144,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
             instructors.forEach(name => {
                 filterInstructor.innerHTML += `<option value="${name}">${name}</option>`;
             });
+            filterInstructor.value = instructors.includes(currentFilters.instructor) ? currentFilters.instructor : 'All';
         }
 
         if (filterLab) {
@@ -151,9 +154,15 @@ document.addEventListener('DOMContentLoaded', () => {
             labs.forEach(name => {
                 filterLab.innerHTML += `<option value="${name}">${name}</option>`;
             });
+            filterLab.value = labs.includes(currentFilters.lab) ? currentFilters.lab : 'All';
         }
         
         filtersSection.style.display = 'block';
+    }
+
+    function refreshFiltersAndSchedule() {
+        updateFilterOptions();
+        renderGroupedSchedule();
     }
 
     function parseDateInput(dateStr) {
@@ -182,6 +191,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         return dates;
+    }
+
+    function getActiveFilters() {
+        return {
+            track: filterTrack ? filterTrack.value : 'All',
+            instructor: filterInstructor ? filterInstructor.value : 'All',
+            lab: filterLab ? filterLab.value : 'All',
+            fromDate: filterDateFrom ? filterDateFrom.value : null,
+            toDate: filterDateTo ? filterDateTo.value : null
+        };
+    }
+
+    function getVisibleSessions(overrideFilters = {}) {
+        const filters = { ...getActiveFilters(), ...overrideFilters };
+        const selectedDates = getDatesInRange(filters.fromDate, filters.toDate);
+
+        if (selectedDates.length === 0) {
+            return [];
+        }
+
+        const visibleSessions = [];
+
+        selectedDates.forEach(dateStr => {
+            const { week, day } = getScheduleWeekAndDay(dateStr);
+            if (!week || !day || day === 'Thursday' || day === 'Friday') return;
+
+            allSessions.forEach(session => {
+                const sheetWeekStr = String(session.week).toLowerCase().replace(/\s/g, '');
+                const targetWeekStr = String(week).toLowerCase().replace(/\s/g, '');
+
+                if ((filters.track === 'All' || session.track === filters.track) &&
+                    (filters.instructor === 'All' || session.trainer === filters.instructor) &&
+                    (filters.lab === 'All' || session.lab === filters.lab) &&
+                    sheetWeekStr === targetWeekStr &&
+                    String(session.day).toLowerCase() === String(day).toLowerCase()) {
+                    visibleSessions.push(session);
+                }
+            });
+        });
+
+        return visibleSessions;
     }
 
     // Advanced mathematical logic to project infinite repetitive weeks starting from July 4, 2026
@@ -323,11 +373,11 @@ document.addEventListener('DOMContentLoaded', () => {
         scheduleContainer.innerHTML = daySections.join('');
     }
 
-    if(filterTrack) filterTrack.addEventListener('change', renderGroupedSchedule);
-    if(filterInstructor) filterInstructor.addEventListener('change', renderGroupedSchedule);
-    if(filterLab) filterLab.addEventListener('change', renderGroupedSchedule);
-    if(filterDateFrom) filterDateFrom.addEventListener('change', renderGroupedSchedule);
-    if(filterDateTo) filterDateTo.addEventListener('change', renderGroupedSchedule);
+    if(filterTrack) filterTrack.addEventListener('change', refreshFiltersAndSchedule);
+    if(filterInstructor) filterInstructor.addEventListener('change', refreshFiltersAndSchedule);
+    if(filterLab) filterLab.addEventListener('change', refreshFiltersAndSchedule);
+    if(filterDateFrom) filterDateFrom.addEventListener('change', refreshFiltersAndSchedule);
+    if(filterDateTo) filterDateTo.addEventListener('change', refreshFiltersAndSchedule);
 
     // Auto-fetch all data concurrently on page load
     async function fetchAllSchedules() {
@@ -357,8 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            updateFilterOptions();
-            renderGroupedSchedule();
+            refreshFiltersAndSchedule();
             
         } catch (error) {
             console.error(error);
@@ -388,9 +437,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
                     
                     allSessions = parseToSessions(rows, "Local Upload");
-                    updateFilterOptions();
                     setDefaultDateRange();
-                    renderGroupedSchedule();
+                    refreshFiltersAndSchedule();
                 } catch(err) {
                     scheduleContainer.innerHTML = '<p class="placeholder" style="color: red;">Error processing local file.</p>';
                 }
