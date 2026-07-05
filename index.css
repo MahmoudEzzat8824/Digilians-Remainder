@@ -48,16 +48,26 @@ hr {
     flex-wrap: wrap;
 }
 
-.filter-group select {
+.filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 170px;
+}
+
+.filter-group select,
+.filter-group input[type="date"] {
     padding: 8px 15px;
     border-radius: 6px;
     border: 1px solid #cbd5e1;
     font-size: 15px;
     outline: none;
     cursor: pointer;
+    background-color: #fff;
 }
 
-.filter-group select:focus {
+.filter-group select:focus,
+.filter-group input[type="date"]:focus {
     border-color: #5b9bd5;
 }
 
@@ -145,6 +155,8 @@ hr {
 @media (max-width: 768px) {
     body { padding: 10px; }
     .filter-group { flex-direction: column; gap: 15px; width: 100%; }
-    .filter-group select { width: 100%; }
+    .filter-item { width: 100%; min-width: 0; }
+    .filter-group select,
+    .filter-group input[type="date"] { width: 100%; }
     .session-table th, .session-table td { padding: 10px; font-size: 13px; }
 }

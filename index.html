@@ -15,13 +15,36 @@
         
         <div class="card filters-section" id="filters-section" style="display: none;">
             <div class="filter-group">
-                <label for="filter-date"><strong>Date:</strong></label>
-                <input type="date" id="filter-date" style="padding: 8px 15px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 15px; outline: none; cursor: pointer;">
+                <div class="filter-item">
+                    <label for="filter-instructor"><strong>Instructor:</strong></label>
+                    <select id="filter-instructor">
+                        <option value="All">All Instructors</option>
+                    </select>
+                </div>
 
-                <label for="filter-track"><strong>Track:</strong></label>
-                <select id="filter-track">
-                    <option value="All">All Tracks</option>
-                </select>
+                <div class="filter-item">
+                    <label for="filter-lab"><strong>Lab:</strong></label>
+                    <select id="filter-lab">
+                        <option value="All">All Labs</option>
+                    </select>
+                </div>
+
+                <div class="filter-item">
+                    <label for="filter-date-from"><strong>From Date:</strong></label>
+                    <input type="date" id="filter-date-from">
+                </div>
+
+                <div class="filter-item">
+                    <label for="filter-date-to"><strong>To Date:</strong></label>
+                    <input type="date" id="filter-date-to">
+                </div>
+
+                <div class="filter-item">
+                    <label for="filter-track"><strong>Track:</strong></label>
+                    <select id="filter-track">
+                        <option value="All">All Tracks</option>
+                    </select>
+                </div>
             </div>
             
             <div id="active-date-display" style="text-align: center; margin-top: 25px; color: #2980b9; font-weight: bold; font-size: 18px; padding-bottom: 10px; border-bottom: 2px solid #e1f0fa;"></div>

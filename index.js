@@ -3,18 +3,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const scheduleContainer = document.getElementById('schedule-container');
     const filtersSection = document.getElementById('filters-section');
     
+    const filterInstructor = document.getElementById('filter-instructor');
+    const filterLab = document.getElementById('filter-lab');
     const filterTrack = document.getElementById('filter-track');
-    const filterDate = document.getElementById('filter-date');
+    const filterDateFrom = document.getElementById('filter-date-from');
+    const filterDateTo = document.getElementById('filter-date-to');
     const activeDateDisplay = document.getElementById('active-date-display');
 
     let allSessions = [];
 
-    // Set Date input to today's date in local time initially
-    if (filterDate) {
+    function formatDateForInput(date) {
+        const tzOffset = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);
+    }
+
+    function setDefaultDateRange() {
         const today = new Date();
-        const tzOffset = today.getTimezoneOffset() * 60000;
-        const localISOTime = (new Date(Date.now() - tzOffset)).toISOString().slice(0, -1);
-        filterDate.value = localISOTime.split('T')[0];
+        const todayValue = formatDateForInput(today);
+
+        if (filterDateFrom) filterDateFrom.value = todayValue;
+        if (filterDateTo) filterDateTo.value = todayValue;
+    }
+
+    // Set Date inputs to today's date in local time initially
+    if (filterDateFrom || filterDateTo) {
+        setDefaultDateRange();
     }
 
     // Document IDs mapped from your shared links
@@ -118,13 +131,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateFilterOptions() {
         const tracks = [...new Set(allSessions.map(s => s.track))].filter(Boolean);
+        const instructors = [...new Set(allSessions.map(s => s.trainer).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+        const labs = [...new Set(allSessions.map(s => s.lab).filter(Boolean))].sort((a, b) => a.localeCompare(b));
         
         if(filterTrack) {
             filterTrack.innerHTML = '<option value="All">All Tracks</option>';
             tracks.forEach(t => { filterTrack.innerHTML += `<option value="${t}">${t}</option>`; });
         }
+
+        if (filterInstructor) {
+            filterInstructor.innerHTML = '<option value="All">All Instructors</option>';
+            instructors.forEach(name => {
+                filterInstructor.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+        }
+
+        if (filterLab) {
+            filterLab.innerHTML = '<option value="All">All Labs</option>';
+            labs.forEach(name => {
+                filterLab.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+        }
         
         filtersSection.style.display = 'block';
+    }
+
+    function parseDateInput(dateStr) {
+        if (!dateStr) return null;
+        const parsed = new Date(dateStr + 'T00:00:00');
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function getDatesInRange(fromDateStr, toDateStr) {
+        const fromDate = parseDateInput(fromDateStr);
+        const toDate = parseDateInput(toDateStr);
+        if (!fromDate && !toDate) return [];
+
+        const start = fromDate || toDate;
+        const end = toDate || fromDate;
+        if (!start || !end) return [];
+
+        const normalizedStart = start <= end ? start : end;
+        const normalizedEnd = start <= end ? end : start;
+        const dates = [];
+
+        const current = new Date(normalizedStart);
+        while (current <= normalizedEnd) {
+            dates.push(formatDateForInput(current));
+            current.setDate(current.getDate() + 1);
+        }
+
+        return dates;
     }
 
     // Advanced mathematical logic to project infinite repetitive weeks starting from July 4, 2026
@@ -160,86 +217,117 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderGroupedSchedule() {
         const selectedTrack = filterTrack ? filterTrack.value : 'All';
-        const dateStr = filterDate ? filterDate.value : null;
-        
-        const { week, day, formattedDate } = getScheduleWeekAndDay(dateStr);
-        if (!week || !day) return;
+        const selectedInstructor = filterInstructor ? filterInstructor.value : 'All';
+        const selectedLab = filterLab ? filterLab.value : 'All';
+        const fromDate = filterDateFrom ? filterDateFrom.value : null;
+        const toDate = filterDateTo ? filterDateTo.value : null;
+
+        const selectedDates = getDatesInRange(fromDate, toDate);
+        if (selectedDates.length === 0) return;
+
+        const rangeStart = selectedDates[0];
+        const rangeEnd = selectedDates[selectedDates.length - 1];
 
         if (activeDateDisplay) {
+            activeDateDisplay.innerHTML = rangeStart === rangeEnd
+                ? `📅 Showing schedule for ${new Date(rangeStart + 'T00:00:00').toLocaleDateString('en-GB')}`
+                : `📅 Showing schedule from ${new Date(rangeStart + 'T00:00:00').toLocaleDateString('en-GB')} to ${new Date(rangeEnd + 'T00:00:00').toLocaleDateString('en-GB')}`;
+        }
+
+        const daySections = [];
+
+        selectedDates.forEach(dateStr => {
+            const { week, day, formattedDate } = getScheduleWeekAndDay(dateStr);
+            if (!week || !day) return;
+
             if (day === "Thursday" || day === "Friday") {
-                activeDateDisplay.innerHTML = `📅 ${formattedDate} is a ${day} (Weekend) — No sessions scheduled.`;
-            } else {
-                activeDateDisplay.innerHTML = `📅 Schedule for ${formattedDate} — ${day}, ${week}`;
+                daySections.push(`
+                    <div class="day-group">
+                        <h3 class="day-title">${formattedDate} - ${day}</h3>
+                        <p class="placeholder" style="color: #27ae60; font-size: 18px; font-weight: bold;">Take a rest! It's the weekend. 🎉</p>
+                    </div>
+                `);
+                return;
             }
-        }
 
-        if (day === "Thursday" || day === "Friday") {
-            scheduleContainer.innerHTML = '<p class="placeholder" style="color: #27ae60; font-size: 18px; font-weight: bold;">Take a rest! It\'s the weekend. 🎉</p>';
-            return;
-        }
+            let filtered = allSessions.filter(s => {
+                const sheetWeekStr = String(s.week).toLowerCase().replace(/\s/g, '');
+                const targetWeekStr = String(week).toLowerCase().replace(/\s/g, '');
 
-        let filtered = allSessions.filter(s => {
-            // Remove whitespace from "Week 1" logic to ensure robust string matching
-            const sheetWeekStr = String(s.week).toLowerCase().replace(/\\s/g, '');
-            const targetWeekStr = String(week).toLowerCase().replace(/\\s/g, '');
-            
-            return (selectedTrack === 'All' || s.track === selectedTrack) &&
-                   (sheetWeekStr === targetWeekStr) &&
-                   (String(s.day).toLowerCase() === String(day).toLowerCase());
-        });
+                return (selectedTrack === 'All' || s.track === selectedTrack) &&
+                       (selectedInstructor === 'All' || s.trainer === selectedInstructor) &&
+                       (selectedLab === 'All' || s.lab === selectedLab) &&
+                       (sheetWeekStr === targetWeekStr) &&
+                       (String(s.day).toLowerCase() === String(day).toLowerCase());
+            });
 
-        if (filtered.length === 0) {
-            scheduleContainer.innerHTML = '<p class="placeholder">No sessions found for this specific date and track.</p>';
-            return;
-        }
-        
-        // Sort chronologically by time
-        filtered.sort((a, b) => {
-            const timeA = parseInt(a.time.split(':')[0]) || 0;
-            const timeB = parseInt(b.time.split(':')[0]) || 0;
-            return timeA - timeB;
-        });
+            if (filtered.length === 0) {
+                daySections.push(`
+                    <div class="day-group">
+                        <h3 class="day-title">${formattedDate} - ${day}</h3>
+                        <p class="placeholder">No sessions found for this date and selected filters.</p>
+                    </div>
+                `);
+                return;
+            }
 
-        let html = `
-        <div class="day-group">
-            <div style="overflow-x: auto;">
-                <table class="session-table">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Track</th>
-                            <th>Instructor</th>
-                            <th>Category</th>
-                            <th>Lab</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        
-        filtered.forEach(session => {
-            html += `
-                <tr>
-                    <td class="time-col">🕒 ${session.time}</td>
-                    <td><span class="track-badge">${session.track}</span></td>
-                    <td><strong>${session.trainer}</strong></td>
-                    <td>${session.category}</td>
-                    <td>${session.lab}</td>
-                </tr>
+            filtered.sort((a, b) => {
+                const timeA = parseInt(a.time.split(':')[0]) || 0;
+                const timeB = parseInt(b.time.split(':')[0]) || 0;
+                return timeA - timeB;
+            });
+
+            let tableHtml = `
+                <div class="day-group">
+                    <h3 class="day-title">${formattedDate} - ${day}</h3>
+                    <div style="overflow-x: auto;">
+                        <table class="session-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Track</th>
+                                    <th>Instructor</th>
+                                    <th>Category</th>
+                                    <th>Lab</th>
+                                </tr>
+                            </thead>
+                            <tbody>
             `;
-        });
-        
-        html += `
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        `;
 
-        scheduleContainer.innerHTML = html;
+            filtered.forEach(session => {
+                tableHtml += `
+                    <tr>
+                        <td class="time-col">🕒 ${session.time}</td>
+                        <td><span class="track-badge">${session.track}</span></td>
+                        <td><strong>${session.trainer}</strong></td>
+                        <td>${session.category}</td>
+                        <td>${session.lab}</td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            daySections.push(tableHtml);
+        });
+
+        if (daySections.length === 0) {
+            scheduleContainer.innerHTML = '<p class="placeholder">No sessions found for the selected date range and filters.</p>';
+            return;
+        }
+        scheduleContainer.innerHTML = daySections.join('');
     }
 
     if(filterTrack) filterTrack.addEventListener('change', renderGroupedSchedule);
-    if(filterDate) filterDate.addEventListener('change', renderGroupedSchedule);
+    if(filterInstructor) filterInstructor.addEventListener('change', renderGroupedSchedule);
+    if(filterLab) filterLab.addEventListener('change', renderGroupedSchedule);
+    if(filterDateFrom) filterDateFrom.addEventListener('change', renderGroupedSchedule);
+    if(filterDateTo) filterDateTo.addEventListener('change', renderGroupedSchedule);
 
     // Auto-fetch all data concurrently on page load
     async function fetchAllSchedules() {
@@ -301,6 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     allSessions = parseToSessions(rows, "Local Upload");
                     updateFilterOptions();
+                    setDefaultDateRange();
                     renderGroupedSchedule();
                 } catch(err) {
                     scheduleContainer.innerHTML = '<p class="placeholder" style="color: red;">Error processing local file.</p>';
