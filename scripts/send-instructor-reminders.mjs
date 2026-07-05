@@ -12,6 +12,9 @@ const contactsSheetUrl = process.env.CONTACTS_SHEET_URL || '';
 const sendGridApiKey = process.env.SENDGRID_API_KEY || '';
 const sendGridFromEmail = process.env.SENDGRID_FROM_EMAIL || '';
 const reminderDaysAhead = Number(process.env.REMINDER_DAYS_AHEAD || '1');
+const dateMode = String(process.env.REMINDER_DATE_MODE || 'today').toLowerCase();
+const reminderFromDate = process.env.REMINDER_FROM_DATE || '';
+const reminderToDate = process.env.REMINDER_TO_DATE || '';
 const dryRun = String(process.env.DRY_RUN || '').toLowerCase() === 'true';
 
 function formatDateForInput(date) {
@@ -235,6 +238,28 @@ function getTargetDate(offsetDays) {
   return formatDateForInput(date);
 }
 
+function getTargetDates() {
+  if (dateMode === 'range') {
+    const fromDate = reminderFromDate || getTargetDate(reminderDaysAhead);
+    const toDate = reminderToDate || fromDate;
+    const start = fromDate <= toDate ? fromDate : toDate;
+    const end = fromDate <= toDate ? toDate : fromDate;
+    const dates = [];
+
+    const current = new Date(`${start}T00:00:00`);
+    const endDate = new Date(`${end}T00:00:00`);
+
+    while (current <= endDate) {
+      dates.push(formatDateForInput(current));
+      current.setDate(current.getDate() + 1);
+    }
+
+    return dates;
+  }
+
+  return [getTargetDate(reminderDaysAhead)];
+}
+
 function matchesSessionDate(session, targetDate) {
   const { week, day } = getScheduleWeekAndDay(targetDate);
   if (!week || !day || day === 'Thursday' || day === 'Friday') return false;
@@ -318,17 +343,17 @@ async function sendEmailWithSendGrid({ to, subject, text }) {
 async function main() {
   await loadInstructorEmails();
 
-  const targetDate = getTargetDate(reminderDaysAhead);
+  const targetDates = getTargetDates();
   const allSessions = await fetchAllSessions();
-  const targetSessions = allSessions.filter(session => matchesSessionDate(session, targetDate));
+  const targetSessions = allSessions.filter(session => targetDates.some(date => matchesSessionDate(session, date)));
   const groupedSessions = groupByInstructor(targetSessions);
 
   if (groupedSessions.length === 0) {
-    console.log(`No instructor sessions found for ${targetDate}.`);
+    console.log(`No instructor sessions found for ${targetDates.join(', ')}.`);
     return;
   }
 
-  console.log(`Found ${groupedSessions.length} instructors with reminders for ${targetDate}.`);
+  console.log(`Found ${groupedSessions.length} instructors with reminders for ${targetDates.join(', ')}.`);
 
   if (!sendGridApiKey || !sendGridFromEmail) {
     throw new Error('Missing SENDGRID_API_KEY or SENDGRID_FROM_EMAIL. Add them as GitHub Secrets.');

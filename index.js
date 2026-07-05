@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterLab = document.getElementById('filter-lab');
     const filterTrack = document.getElementById('filter-track');
     const filterSearch = document.getElementById('filter-search');
+    const filterDateMode = document.getElementById('filter-date-mode');
+    const filterDateFromItem = document.getElementById('filter-date-from-item');
+    const filterDateToItem = document.getElementById('filter-date-to-item');
     const filterDateFrom = document.getElementById('filter-date-from');
     const filterDateTo = document.getElementById('filter-date-to');
     const clearFiltersBtn = document.getElementById('clear-filters-btn');
@@ -49,11 +52,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getActiveFilters() {
+        const dateMode = filterDateMode ? filterDateMode.value : 'today';
         return {
             track: filterTrack ? filterTrack.value : 'All',
             instructor: filterInstructor ? filterInstructor.value : 'All',
             lab: filterLab ? filterLab.value : 'All',
             search: filterSearch ? filterSearch.value.trim() : '',
+            dateMode,
             fromDate: filterDateFrom ? filterDateFrom.value : null,
             toDate: filterDateTo ? filterDateTo.value : null
         };
@@ -84,18 +89,36 @@ document.addEventListener('DOMContentLoaded', () => {
             instructor: params.get('instructor') || 'All',
             lab: params.get('lab') || 'All',
             search: params.get('search') || '',
+            dateMode: params.get('mode') || 'today',
             fromDate: params.get('from') || getTodayValue(),
             toDate: params.get('to') || getTodayValue()
         };
     }
 
     function applyFilters(filters) {
+        const dateMode = filters.dateMode || 'today';
         if (filterTrack) filterTrack.value = filters.track || 'All';
         if (filterInstructor) filterInstructor.value = filters.instructor || 'All';
         if (filterLab) filterLab.value = filters.lab || 'All';
         if (filterSearch) filterSearch.value = filters.search || '';
+        if (filterDateMode) filterDateMode.value = dateMode;
         if (filterDateFrom) filterDateFrom.value = filters.fromDate || getTodayValue();
         if (filterDateTo) filterDateTo.value = filters.toDate || getTodayValue();
+        updateDateModeVisibility(dateMode);
+    }
+
+    function updateDateModeVisibility(mode) {
+        const activeMode = mode || (filterDateMode ? filterDateMode.value : 'today');
+        const showRange = activeMode === 'range';
+
+        if (filterDateFromItem) filterDateFromItem.style.display = showRange ? 'flex' : 'none';
+        if (filterDateToItem) filterDateToItem.style.display = showRange ? 'flex' : 'none';
+
+        if (!showRange) {
+            const todayValue = getTodayValue();
+            if (filterDateFrom) filterDateFrom.value = todayValue;
+            if (filterDateTo) filterDateTo.value = todayValue;
+        }
     }
 
     function resetFilters() {
@@ -104,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
             instructor: 'All',
             lab: 'All',
             search: '',
+            dateMode: 'today',
             fromDate: getTodayValue(),
             toDate: getTodayValue()
         });
@@ -414,6 +438,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return dates;
     }
 
+    function getDatesForMode(filters) {
+        if (filters.dateMode === 'today') {
+            return [filters.fromDate || getTodayValue()];
+        }
+
+        return getDatesInRange(filters.fromDate, filters.toDate);
+    }
+
 
     // Advanced mathematical logic to project infinite repetitive weeks starting from July 4, 2026
     function getScheduleWeekAndDay(dateStr) {
@@ -448,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderGroupedSchedule() {
         const filters = getActiveFilters();
-        const selectedDates = getDatesInRange(filters.fromDate, filters.toDate);
+        const selectedDates = getDatesForMode(filters);
         if (selectedDates.length === 0) return;
 
         const occurrences = getScheduleOccurrences();
@@ -609,6 +641,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if(filterInstructor) filterInstructor.addEventListener('change', refreshFiltersAndSchedule);
     if(filterLab) filterLab.addEventListener('change', refreshFiltersAndSchedule);
     if(filterSearch) filterSearch.addEventListener('input', refreshFiltersAndSchedule);
+    if(filterDateMode) filterDateMode.addEventListener('change', () => {
+        updateDateModeVisibility(filterDateMode.value);
+        refreshFiltersAndSchedule();
+    });
     if(filterDateFrom) filterDateFrom.addEventListener('change', refreshFiltersAndSchedule);
     if(filterDateTo) filterDateTo.addEventListener('change', refreshFiltersAndSchedule);
     if(clearFiltersBtn) clearFiltersBtn.addEventListener('click', resetFilters);

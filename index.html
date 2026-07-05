@@ -21,6 +21,14 @@
                 </div>
 
                 <div class="filter-item">
+                    <label for="filter-date-mode"><strong>Date Mode:</strong></label>
+                    <select id="filter-date-mode">
+                        <option value="today">Today Only</option>
+                        <option value="range">From / To</option>
+                    </select>
+                </div>
+
+                <div class="filter-item">
                     <label for="filter-instructor"><strong>Instructor:</strong></label>
                     <select id="filter-instructor">
                         <option value="All">All Instructors</option>
@@ -34,12 +42,12 @@
                     </select>
                 </div>
 
-                <div class="filter-item">
+                <div class="filter-item date-range-item" id="filter-date-from-item">
                     <label for="filter-date-from"><strong>From Date:</strong></label>
                     <input type="date" id="filter-date-from">
                 </div>
 
-                <div class="filter-item">
+                <div class="filter-item date-range-item" id="filter-date-to-item">
                     <label for="filter-date-to"><strong>To Date:</strong></label>
                     <input type="date" id="filter-date-to">
                 </div>
