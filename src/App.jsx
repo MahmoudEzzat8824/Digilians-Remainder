@@ -555,7 +555,7 @@ export default function App() {
       return `${session.formattedDate} (${session.day}) - ${session.time} | ${session.track} | ${session.lab} | ${session.category}`;
     });
     const intro = `Hello ${instructorName},\n\nThis is a reminder of your upcoming sessions:\n\n`;
-    const outro = `\n\nPlease let me know if any changes are needed.\n\nBest regards,`;
+    const outro = `\n\nplease make sure you come before the session by a good time\n\nBest regards,`;
     return intro + lines.join('\n') + outro;
   };
 

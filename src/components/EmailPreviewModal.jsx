@@ -20,7 +20,11 @@ export default function EmailPreviewModal({ emailData, onClose }) {
   const handleOpenClient = () => {
     // Keep raw recipient email to prevent mailto: parser errors on some OS
     const mailtoUrl = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailtoUrl;
+    const link = document.createElement('a');
+    link.href = mailtoUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleOpenGmail = () => {
