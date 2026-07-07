@@ -69,6 +69,55 @@ document.addEventListener('DOMContentLoaded', () => {
         return '';
     }
 
+    function normalizeHeader(value) {
+        return normalizeText(value).replace(/[^a-z0-9]+/g, ' ');
+    }
+
+    const contactsSheetId = '1zIYPqJZN-6uv6L9tAmDro_g1zC2f9IreHu9aOHlIrCQ';
+
+    async function loadInstructorEmailsFromSheet() {
+        try {
+            const url = `https://docs.google.com/spreadsheets/d/${contactsSheetId}/export?format=csv`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Failed to fetch contacts sheet");
+
+            const csvText = await response.text();
+            const workbook = XLSX.read(csvText, { type: 'string' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+            if (!rows || rows.length === 0) return;
+
+            const headerRow = rows[0] || [];
+            const normalizedHeaders = headerRow.map(normalizeHeader);
+            const emailIndex = normalizedHeaders.findIndex(header => header.includes('email') || header.includes('mail'));
+            const keyIndexCandidates = ['instructor', 'trainer', 'name', 'full name', 'number', 'id'];
+
+            let keyIndex = keyIndexCandidates
+                .map(candidate => normalizedHeaders.findIndex(header => header === candidate || header.includes(candidate)))
+                .find(index => index >= 0);
+
+            if (keyIndex === undefined || keyIndex < 0) {
+                keyIndex = 0;
+            }
+
+            if (emailIndex >= 0) {
+                for (let r = 1; r < rows.length; r++) {
+                    const row = rows[r] || [];
+                    const key = String(row[keyIndex] || '').trim();
+                    const email = String(row[emailIndex] || '').trim();
+
+                    if (key && email) {
+                        instructorEmailMap[key] = email;
+                        instructorEmailMap[normalizeText(key)] = email;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Failed to load trainer emails from Google Sheet, using local fallback map:", error);
+        }
+    }
+
     function getActiveFilters() {
         const dateMode = filterDateMode ? filterDateMode.value : 'today';
         return {
@@ -672,6 +721,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auto-fetch all data concurrently on page load
     async function fetchAllSchedules() {
         try {
+            await loadInstructorEmailsFromSheet();
+            
             const fetchPromises = Object.entries(sheets).map(async ([trackName, sheetId]) => {
                 const url = "https://docs.google.com/spreadsheets/d/" + sheetId + "/export?format=xlsx";
                 const response = await fetch(url);
