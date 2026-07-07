@@ -18,8 +18,14 @@ export default function EmailPreviewModal({ emailData, onClose }) {
   };
 
   const handleOpenClient = () => {
-    const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    // Keep raw recipient email to prevent mailto: parser errors on some OS
+    const mailtoUrl = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoUrl;
+  };
+
+  const handleOpenGmail = () => {
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, '_blank');
   };
 
   return (
@@ -80,6 +86,11 @@ export default function EmailPreviewModal({ emailData, onClose }) {
           <button type="button" className="btn btn-secondary" onClick={handleCopy}>
             {copied ? <Check size={16} style={{ color: 'var(--success-color)' }} /> : <Copy size={16} />}
             {copied ? 'Copied!' : 'Copy Body'}
+          </button>
+
+          <button type="button" className="btn btn-secondary" onClick={handleOpenGmail}>
+            <Mail size={16} style={{ color: '#ea4335' }} />
+            Open in Gmail
           </button>
 
           <button type="button" className="btn btn-primary" onClick={handleOpenClient}>
