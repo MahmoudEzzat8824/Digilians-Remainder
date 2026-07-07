@@ -316,7 +316,7 @@ function buildEmailText(instructorName, sessions, targetDate) {
     '',
     ...lines,
     '',
-    'please make sure you come before the session by a good time',
+    'Please make sure you come before the session',
     '',
     'Best regards,'
   ].join('\n');
