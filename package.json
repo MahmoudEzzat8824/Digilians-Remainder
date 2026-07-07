@@ -1,24 +1,28 @@
 {
   "name": "digilians-remainder",
   "version": "1.0.0",
-  "description": "link: https://MahmoudEzzat8824.github.io/Digilians-Remainder/",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MahmoudEzzat8824/Digilians-Remainder.git"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/MahmoudEzzat8824/Digilians-Remainder/issues"
-  },
   "homepage": "https://github.com/MahmoudEzzat8824/Digilians-Remainder#readme",
   "dependencies": {
+    "lucide-react": "^0.400.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.3.1"
   }
 }
