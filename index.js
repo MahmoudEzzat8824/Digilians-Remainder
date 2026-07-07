@@ -26,8 +26,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let allSessions = [];
 
     const instructorEmailMap = {
-        // Example:
-        // 'Instructor Name': 'instructor@example.com'
+        'Ahlam Waleed': 'A7lam.waleed@gmail.com',
+        'Ahmed madeh': 'eng.a.madeh@gmail.com',
+        'Gehad Waheed': 'gehadwaheed42@gmail.com',
+        'Haidy Saeid': 'Haidyraafatseada5@gmail.com',
+        'Hosam Ashraf': 'hosh25006@gmail.com',
+        'Mahmoud Ramadan': 'mahmoudex732@gmail.com',
+        'Mavie Ahmed': 'mavieahmedkhattab@gmail.com',
+        'Mohamed Azzam': 'devazzam001@gmail.com',
+        'Mohamed Edriss': 'mohamedkhaledidris@gmail.com'
     };
 
     function formatDateForInput(date) {
@@ -49,6 +56,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function normalizeText(value) {
         return String(value || '').trim().toLowerCase();
+    }
+
+    function getInstructorEmail(name) {
+        if (!name) return '';
+        const normalized = normalizeText(name);
+        for (const [key, email] of Object.entries(instructorEmailMap)) {
+            if (normalizeText(key) === normalized) {
+                return email;
+            }
+        }
+        return '';
     }
 
     function getActiveFilters() {
@@ -259,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return [...grouped.entries()].map(([instructor, sessions]) => ({
             instructor,
-            email: instructorEmailMap[instructor] || '',
+            email: getInstructorEmail(instructor),
             sessions: sessions.sort((a, b) => {
                 const dateA = a.dateStr.localeCompare(b.dateStr);
                 if (dateA !== 0) return dateA;
@@ -279,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openReminderEmail(instructorName, sessions) {
-        const email = instructorEmailMap[instructorName];
+        const email = getInstructorEmail(instructorName);
         const subject = encodeURIComponent(`Reminder: Upcoming sessions for ${instructorName}`);
         const body = encodeURIComponent(buildReminderBody(instructorName, sessions));
 

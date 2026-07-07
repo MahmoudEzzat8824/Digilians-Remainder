@@ -7,7 +7,27 @@ const sheets = {
   'Coaching': '1RbOVAhasXMrAMMtxzpfyUfoYSAjxeC1intzYEbEMP5I'
 };
 
-let instructorEmails = parseInstructorEmails(process.env.INSTRUCTOR_EMAILS_JSON || '{}');
+let instructorEmails = {
+  'ahlam waleed': 'A7lam.waleed@gmail.com',
+  'ahmed madeh': 'eng.a.madeh@gmail.com',
+  'gehad waheed': 'gehadwaheed42@gmail.com',
+  'haidy saeid': 'Haidyraafatseada5@gmail.com',
+  'hosam ashraf': 'hosh25006@gmail.com',
+  'mahmoud ramadan': 'mahmoudex732@gmail.com',
+  'mavie ahmed': 'mavieahmedkhattab@gmail.com',
+  'mohamed azzam': 'devazzam001@gmail.com',
+  'mohamed edriss': 'mohamedkhaledidris@gmail.com',
+  'Ahlam Waleed': 'A7lam.waleed@gmail.com',
+  'Ahmed madeh': 'eng.a.madeh@gmail.com',
+  'Gehad Waheed': 'gehadwaheed42@gmail.com',
+  'Haidy Saeid': 'Haidyraafatseada5@gmail.com',
+  'Hosam Ashraf': 'hosh25006@gmail.com',
+  'Mahmoud Ramadan': 'mahmoudex732@gmail.com',
+  'Mavie Ahmed': 'mavieahmedkhattab@gmail.com',
+  'Mohamed Azzam': 'devazzam001@gmail.com',
+  'Mohamed Edriss': 'mohamedkhaledidris@gmail.com',
+  ...parseInstructorEmails(process.env.INSTRUCTOR_EMAILS_JSON || '{}')
+};
 const contactsSheetUrl = process.env.CONTACTS_SHEET_URL || '';
 const sendGridApiKey = process.env.SENDGRID_API_KEY || '';
 const sendGridFromEmail = process.env.SENDGRID_FROM_EMAIL || '';
@@ -344,6 +364,7 @@ async function main() {
   await loadInstructorEmails();
 
   const targetDates = getTargetDates();
+  const targetDate = targetDates[0] || '';
   const allSessions = await fetchAllSessions();
   const targetSessions = allSessions.filter(session => targetDates.some(date => matchesSessionDate(session, date)));
   const groupedSessions = groupByInstructor(targetSessions);
