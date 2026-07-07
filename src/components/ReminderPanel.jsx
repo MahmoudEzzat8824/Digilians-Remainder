@@ -1,7 +1,7 @@
 import React from 'react';
-import { Mail, Plus, AlertCircle } from 'lucide-react';
+import { Mail, Plus, AlertCircle, RefreshCw } from 'lucide-react';
 
-export default function ReminderPanel({ occurrences, instructorEmailMap, getInstructorEmail }) {
+export default function ReminderPanel({ occurrences, instructorEmailMap, getInstructorEmail, onComposeEmail, onEditSession }) {
   const grouped = React.useMemo(() => {
     const groupedMap = new Map();
 
@@ -24,24 +24,8 @@ export default function ReminderPanel({ occurrences, instructorEmailMap, getInst
     }));
   }, [occurrences, instructorEmailMap, getInstructorEmail]);
 
-  const buildReminderBody = (instructorName, sessions) => {
-    const lines = sessions.map(session => {
-      return `${session.formattedDate} (${session.day}) - ${session.time} | ${session.track} | ${session.lab} | ${session.category}`;
-    });
-
-    const intro = `Hello ${instructorName},\n\nThis is a reminder of your upcoming sessions:\n\n`;
-    const outro = `\n\nPlease let me know if any changes are needed.\n\nBest regards,`;
-    return intro + lines.join('\n') + outro;
-  };
-
   const handleComposeEmail = (group) => {
-    if (!group.email) {
-      alert(`Add an email address for ${group.instructor} in the Google Sheet, then refresh this page.`);
-      return;
-    }
-    const subject = encodeURIComponent(`Reminder: Upcoming sessions for ${group.instructor}`);
-    const body = encodeURIComponent(buildReminderBody(group.instructor, group.sessions));
-    window.location.href = `mailto:${encodeURIComponent(group.email)}?subject=${subject}&body=${body}`;
+    onComposeEmail(group.instructor, group.sessions, group.email);
   };
 
   return (
@@ -96,11 +80,28 @@ export default function ReminderPanel({ occurrences, instructorEmailMap, getInst
 
               <ul className="reminder-list">
                 {group.sessions.map((session, sIdx) => (
-                  <li key={sIdx}>
-                    <span>📅 {session.formattedDate}</span>
-                    <span>• {session.time}</span>
-                    <span>• {session.track}</span>
-                    <span>• {session.lab}</span>
+                  <li key={sIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '0.5rem', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center' }}>
+                      <span>📅 {session.formattedDate}</span>
+                      <span>• {session.time}</span>
+                      <span>• {session.track}</span>
+                      <span>• {session.lab}</span>
+                      {session.originalTrainer && session.originalTrainer !== session.trainer && (
+                        <span style={{ fontSize: '0.7rem', color: 'var(--accent-color)', fontStyle: 'italic', fontWeight: 600 }}>
+                          (ex: {session.originalTrainer})
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '0.1rem 0.35rem', borderRadius: '4px', fontSize: '0.6rem', height: '18px', display: 'flex', alignItems: 'center', gap: '0.15rem' }}
+                      onClick={() => onEditSession(session)}
+                      title="Replace Instructor"
+                    >
+                      <RefreshCw size={8} />
+                      Replace
+                    </button>
                   </li>
                 ))}
               </ul>

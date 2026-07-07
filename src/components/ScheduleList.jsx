@@ -1,7 +1,7 @@
 import React from 'react';
-import { Clock, Monitor, User, Coffee, CalendarRange } from 'lucide-react';
+import { Clock, Monitor, User, Coffee, CalendarRange, RefreshCw } from 'lucide-react';
 
-export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occurrences }) {
+export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occurrences, onEditSession }) {
   if (selectedDates.length === 0) {
     return (
       <div className="card placeholder-text">
@@ -74,12 +74,29 @@ export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occ
                       <span className="badge badge-track">{session.track}</span>
                     </td>
                     <td>
-                      <span className="badge" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent-color)' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <User size={12} />
-                          {session.trainer}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span className="badge" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent-color)' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <User size={12} />
+                            {session.trainer}
+                          </span>
                         </span>
-                      </span>
+                        {session.originalTrainer && session.originalTrainer !== session.trainer && (
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
+                            (ex: {session.originalTrainer})
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: '0.2rem 0.4rem', borderRadius: '4px', fontSize: '0.65rem', minWidth: 'auto', height: '22px' }}
+                          onClick={() => onEditSession(session)}
+                          title="Replace Instructor for this session"
+                        >
+                          <RefreshCw size={10} />
+                          Replace
+                        </button>
+                      </div>
                     </td>
                     <td>{session.category}</td>
                     <td>

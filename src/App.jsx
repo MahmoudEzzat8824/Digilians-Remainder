@@ -5,12 +5,13 @@ import KpiCards from './components/KpiCards';
 import FilterPanel from './components/FilterPanel';
 import ScheduleList from './components/ScheduleList';
 import ReminderPanel from './components/ReminderPanel';
+import EmailPreviewModal from './components/EmailPreviewModal';
+import ReplaceInstructorModal from './components/ReplaceInstructorModal';
 
 // Track Sheet IDs
 const sheets = {
   'Data Analysis': '17omkSQuIBzvsFL6ygmVgybtA_byOhrCl',
   'Media Production': '11zulEER_JgMy8YHT3RVEHVIUET3MecgC',
-  'INNOV/PROMPT': '1Ww6l4g5A9QTElH-QEI6XWUZ4N8g7W7yY',
   'Coaching': '1RbOVAhasXMrAMMtxzpfyUfoYSAjxeC1intzYEbEMP5I'
 };
 
@@ -86,10 +87,14 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   
+  // Modals state
+  const [activePreviewEmail, setActivePreviewEmail] = useState(null);
+  const [activeEditSession, setActiveEditSession] = useState(null);
+
   // Theme State
   const [isDark, setIsDark] = useState(() => {
-    return document.documentElement.classList.contains('dark') || 
-           localStorage.getItem('theme') === 'dark';
+    return document.documentElement.classList.contains('dark') ||
+      localStorage.getItem('theme') === 'dark';
   });
 
   // Filters State
@@ -129,7 +134,7 @@ export default function App() {
     if (filters.dateMode !== 'today') params.set('mode', filters.dateMode);
     if (filters.fromDate && filters.fromDate !== getTodayValue()) params.set('from', filters.fromDate);
     if (filters.toDate && filters.toDate !== getTodayValue()) params.set('to', filters.toDate);
-    
+
     const queryString = params.toString();
     const newUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ''}`;
     window.history.replaceState({}, '', newUrl);
@@ -289,19 +294,19 @@ export default function App() {
           const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=xlsx`;
           const res = await fetch(url);
           if (!res.ok) throw new Error(`Failed to fetch sheet for track: ${trackName}`);
-          
+
           const arrayBuffer = await res.arrayBuffer();
           const data = new Uint8Array(arrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
           const worksheet = workbook.Sheets[workbook.SheetNames[0]];
           const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-          
+
           return parseToSessions(rows, trackName);
         });
 
         const results = await Promise.all(fetchPromises);
         if (!active) return;
-        
+
         const mergedSessions = results.flat();
         setAllSessions(mergedSessions);
 
@@ -336,7 +341,7 @@ export default function App() {
   // Compute occurrences (filtered sessions)
   const occurrences = useMemo(() => {
     const datesSet = new Set(selectedDates);
-    
+
     return allSessions.filter(session => {
       // Find matching dates for this session's week and day
       let matchesDate = false;
@@ -391,7 +396,7 @@ export default function App() {
     // Dropdowns are dynamically computed from currently visible/available options to prevent empty selections
     // Let's first get matches without specific filter constraints to populate the drop lists
     const tracksList = [...new Set(allSessions.map(s => s.track))].filter(Boolean);
-    
+
     // For instructors and labs, base them on current dates selection
     const rawInstructors = [];
     const rawLabs = [];
@@ -485,7 +490,7 @@ export default function App() {
       Category: occ.category,
       Lab: occ.lab
     }));
-    
+
     const headers = Object.keys(rows[0]);
     const csvContent = [
       headers.join(','),
@@ -522,6 +527,49 @@ export default function App() {
     XLSX.writeFile(workbook, 'digilians-schedule.xlsx');
   };
 
+  const handleReplaceInstructor = (sessionToUpdate, newInstructorName) => {
+    setAllSessions(prevSessions => {
+      return prevSessions.map(session => {
+        if (
+          session.day === sessionToUpdate.day &&
+          session.week === sessionToUpdate.week &&
+          session.time === sessionToUpdate.time &&
+          session.track === sessionToUpdate.track &&
+          session.lab === sessionToUpdate.lab &&
+          session.category === sessionToUpdate.category
+        ) {
+          return {
+            ...session,
+            originalTrainer: session.originalTrainer || session.trainer,
+            trainer: newInstructorName
+          };
+        }
+        return session;
+      });
+    });
+    setActiveEditSession(null);
+  };
+
+  const buildEmailText = (instructorName, sessions) => {
+    const lines = sessions.map(session => {
+      return `${session.formattedDate} (${session.day}) - ${session.time} | ${session.track} | ${session.lab} | ${session.category}`;
+    });
+    const intro = `Hello ${instructorName},\n\nThis is a reminder of your upcoming sessions:\n\n`;
+    const outro = `\n\nPlease let me know if any changes are needed.\n\nBest regards,`;
+    return intro + lines.join('\n') + outro;
+  };
+
+  const handleComposeEmailClick = (instructorName, sessions, emailAddress) => {
+    const subject = `Reminder: Upcoming sessions for ${instructorName}`;
+    const body = buildEmailText(instructorName, sessions);
+    setActivePreviewEmail({
+      instructorName,
+      to: emailAddress || '',
+      subject,
+      body
+    });
+  };
+
   return (
     <div className="app-container">
       <DashboardHeader isDark={isDark} toggleTheme={toggleTheme} />
@@ -554,7 +602,7 @@ export default function App() {
       ) : (
         <>
           <KpiCards occurrences={occurrences} instructorEmailMap={instructorEmailMap} />
-          
+
           <FilterPanel
             filters={filters}
             setFilters={setFilters}
@@ -580,14 +628,33 @@ export default function App() {
               selectedDates={selectedDates}
               getScheduleWeekAndDay={getScheduleWeekAndDay}
               occurrences={occurrences}
+              onEditSession={setActiveEditSession}
             />
 
             <ReminderPanel
               occurrences={occurrences}
               instructorEmailMap={instructorEmailMap}
               getInstructorEmail={getInstructorEmail}
+              onComposeEmail={handleComposeEmailClick}
+              onEditSession={setActiveEditSession}
             />
           </div>
+          
+          {activePreviewEmail && (
+            <EmailPreviewModal
+              emailData={activePreviewEmail}
+              onClose={() => setActivePreviewEmail(null)}
+            />
+          )}
+
+          {activeEditSession && (
+            <ReplaceInstructorModal
+              session={activeEditSession}
+              instructors={filterOptions.instructors}
+              onSave={handleReplaceInstructor}
+              onClose={() => setActiveEditSession(null)}
+            />
+          )}
         </>
       )}
     </div>
