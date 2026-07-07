@@ -5,93 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="A dynamic training schedule dashboard.">
     <title>Digilians Schedule</title>
-    <link rel="stylesheet" href="index.css">
-    <!-- Load SheetJS for Excel Parsing -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script type="module" crossorigin src="./assets/index-BnOIXDS1.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CC6WGaWq.css">
 </head>
 <body>
-    <main>
-        <h1>Live Training Schedules</h1>
-        
-        <div class="card filters-section" id="filters-section" style="display: none;">
-            <div class="filter-group">
-                <div class="filter-item filter-search-item">
-                    <label for="filter-search"><strong>Search:</strong></label>
-                    <input type="text" id="filter-search" placeholder="Instructor or lab name">
-                </div>
-
-                <div class="filter-item">
-                    <label for="filter-date-mode"><strong>Date Mode:</strong></label>
-                    <select id="filter-date-mode">
-                        <option value="today">Today Only</option>
-                        <option value="range">From / To</option>
-                    </select>
-                </div>
-
-                <div class="filter-item">
-                    <label for="filter-instructor"><strong>Instructor:</strong></label>
-                    <select id="filter-instructor">
-                        <option value="All">All Instructors</option>
-                    </select>
-                </div>
-
-                <div class="filter-item">
-                    <label for="filter-lab"><strong>Lab:</strong></label>
-                    <select id="filter-lab">
-                        <option value="All">All Labs</option>
-                    </select>
-                </div>
-
-                <div class="filter-item date-range-item" id="filter-date-from-item">
-                    <label for="filter-date-from"><strong>From Date:</strong></label>
-                    <input type="date" id="filter-date-from">
-                </div>
-
-                <div class="filter-item date-range-item" id="filter-date-to-item">
-                    <label for="filter-date-to"><strong>To Date:</strong></label>
-                    <input type="date" id="filter-date-to">
-                </div>
-
-                <div class="filter-item">
-                    <label for="filter-track"><strong>Track:</strong></label>
-                    <select id="filter-track">
-                        <option value="All">All Tracks</option>
-                    </select>
-                </div>
-
-                <div class="filter-actions">
-                    <button type="button" id="clear-filters-btn">Clear Filters</button>
-                    <button type="button" id="export-csv-btn">Export CSV</button>
-                    <button type="button" id="export-xlsx-btn">Export Excel</button>
-                </div>
-            </div>
-            
-            <div id="active-date-display" style="text-align: center; margin-top: 25px; color: #2980b9; font-weight: bold; font-size: 18px; padding-bottom: 10px; border-bottom: 2px solid #e1f0fa;"></div>
-        </div>
-
-        <div class="card summary-section" id="summary-section" style="display: none;">
-            <div class="summary-header">
-                <h2>Schedule Summary</h2>
-                <div class="summary-count" id="results-count">0 sessions</div>
-            </div>
-            <div class="summary-body" id="summary-body"></div>
-        </div>
-
-        <div class="card reminder-section" id="reminder-section" style="display: none;">
-            <div class="summary-header">
-                <h2>Email Reminders</h2>
-                <div class="summary-count" id="reminder-count">0 instructors</div>
-            </div>
-            <div class="reminder-body" id="reminder-body"></div>
-        </div>
-
-        <div id="schedule-container">
-            <p class="placeholder" style="color: #5b9bd5; font-weight: bold; font-size: 18px; margin-top: 50px;">
-                Loading all live schedules... Please wait.
-            </p>
-        </div>
-    </main>
-
-    <script src="index.js"></script>
+    <div id="root"></div>
 </body>
 </html>
