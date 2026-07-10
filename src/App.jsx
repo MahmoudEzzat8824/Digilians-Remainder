@@ -86,6 +86,8 @@ export default function App() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   
   // Modals state
   const [activePreviewEmail, setActivePreviewEmail] = useState(null);
@@ -238,12 +240,21 @@ export default function App() {
     return sessions;
   };
 
+  // Manual refresh trigger
+  const refreshData = React.useCallback(() => {
+    setRefreshKey(k => k + 1);
+  }, []);
+
   // Fetch all schedules and trainer emails dynamically
+  // Re-runs on mount and every 5 minutes (REFRESH_INTERVAL_MS), or when refreshKey changes
+  const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
   useEffect(() => {
     let active = true;
 
     async function loadData() {
-      setIsLoading(true);
+      // On background refreshes, don't show the full-screen spinner
+      if (allSessions.length === 0) setIsLoading(true);
       setErrorMsg('');
       try {
         // 1. Fetch trainer emails from Google Sheet first
@@ -309,6 +320,7 @@ export default function App() {
 
         const mergedSessions = results.flat();
         setAllSessions(mergedSessions);
+        setLastUpdated(new Date());
 
         if (mergedSessions.length === 0) {
           setErrorMsg("Could not parse schedule session data.");
@@ -325,10 +337,16 @@ export default function App() {
 
     loadData();
 
+    // Schedule periodic background refresh
+    const intervalId = setInterval(() => {
+      if (active) loadData();
+    }, REFRESH_INTERVAL_MS);
+
     return () => {
       active = false;
+      clearInterval(intervalId);
     };
-  }, []);
+  }, [refreshKey]); // refreshKey re-mounts the effect on manual refresh
 
   // Compute selected dates based on range/today mode
   const selectedDates = useMemo(() => {
@@ -572,7 +590,13 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <DashboardHeader isDark={isDark} toggleTheme={toggleTheme} />
+      <DashboardHeader
+        isDark={isDark}
+        toggleTheme={toggleTheme}
+        lastUpdated={lastUpdated}
+        onRefresh={refreshData}
+        isRefreshing={isLoading}
+      />
 
       {isLoading ? (
         <div className="card spinner-container">

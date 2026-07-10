@@ -4,6 +4,10 @@ on:
   push:
     branches: ["main", "master"]
   workflow_dispatch:
+  schedule:
+    # Rebuild & redeploy every 5 minutes so the live site stays in sync
+    # with changes made directly in Google Sheets
+    - cron: '*/5 * * * *'
 
 permissions:
   contents: write
