@@ -77,7 +77,7 @@ export default function App() {
     'Ahlam Waleed': 'A7lam.waleed@gmail.com',
     'Ahmed madeh': 'eng.a.madeh@gmail.com',
     'Gehad Waheed': 'gehadwaheed42@gmail.com',
-    'Haidy Saeid': 'Haidyraafatseada5@gmail.com',
+    'Haidy Seada': 'Haidyraafatseada5@gmail.com',
     'Hosam Ashraf': 'hosh25006@gmail.com',
     'Mahmoud Ramadan': 'mahmoudex732@gmail.com',
     'Mavie Ahmed': 'mavieahmedkhattab@gmail.com',
