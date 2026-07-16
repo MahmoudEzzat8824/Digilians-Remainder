@@ -14,8 +14,7 @@ import ReplaceInstructorModal from './components/ReplaceInstructorModal';
 const sheets = {
   'Coaching': '1Bius1WfZY3TZN0lIKgq95lAR9WnZyCBiCg7M6CAy4k0',
   'Data Analysis': '1P5Cxi9tzINtsVph8fFXMyVdayVj3i1Tx',
-  'Media Production': '1tUOF04wcALeT-bucRy7Z3lPdcmsRkXzU',
-  'Innov/Prompt': '1FwJLcM0bPU62q38jMhlh6AfR-8UpNeL3'
+  'Media Production': '1tUOF04wcALeT-bucRy7Z3lPdcmsRkXzU'
 };
 
 const contactsSheetId = '1zIYPqJZN-6uv6L9tAmDro_g1zC2f9IreHu9aOHlIrCQ';
@@ -106,7 +105,7 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState('');
   const [lastUpdated, setLastUpdated] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  
+
   // Toast notifications
   const [toasts, setToasts] = useState([]);
   const addToast = (message, type = 'success') => {
@@ -814,7 +813,7 @@ export default function App() {
               />
             </div>
           </div>
-          
+
           {activePreviewEmail && (
             <EmailPreviewModal
               emailData={activePreviewEmail}
