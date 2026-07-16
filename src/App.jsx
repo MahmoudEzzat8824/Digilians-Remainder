@@ -5,6 +5,8 @@ import KpiCards from './components/KpiCards';
 import FilterPanel from './components/FilterPanel';
 import ScheduleList from './components/ScheduleList';
 import ReminderPanel from './components/ReminderPanel';
+import VacationSwapPanel from './components/VacationSwapPanel';
+import InteractiveCalendar from './components/InteractiveCalendar';
 import EmailPreviewModal from './components/EmailPreviewModal';
 import ReplaceInstructorModal from './components/ReplaceInstructorModal';
 
@@ -74,6 +76,20 @@ function getDatesInRange(fromDateStr, toDateStr) {
 
 export default function App() {
   const [allSessions, setAllSessions] = useState([]);
+  const [daysOff, setDaysOff] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('digilians_daysoff') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [swappedDays, setSwappedDays] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('digilians_swapped') || '[]');
+    } catch {
+      return [];
+    }
+  });
   const [instructorEmailMap, setInstructorEmailMap] = useState({
     'Ahlam Waleed': 'A7lam.waleed@gmail.com',
     'Ahmed madeh': 'eng.a.madeh@gmail.com',
@@ -86,10 +102,19 @@ export default function App() {
     'Mohamed Edriss': 'mohamedkhaledidris@gmail.com'
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [lastUpdated, setLastUpdated] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   
+  // Toast notifications
+  const [toasts, setToasts] = useState([]);
+  const addToast = (message, type = 'success') => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+  };
+
   // Modals state
   const [activePreviewEmail, setActivePreviewEmail] = useState(null);
   const [activeEditSession, setActiveEditSession] = useState(null);
@@ -126,6 +151,85 @@ export default function App() {
   }, [isDark]);
 
   const toggleTheme = () => setIsDark(prev => !prev);
+
+  // Sync daysOff and swappedDays to localStorage
+  useEffect(() => {
+    localStorage.setItem('digilians_daysoff', JSON.stringify(daysOff));
+  }, [daysOff]);
+
+  useEffect(() => {
+    localStorage.setItem('digilians_swapped', JSON.stringify(swappedDays));
+  }, [swappedDays]);
+
+  const handleAddDayOff = (newDayOff) => {
+    setDaysOff(prev => [...prev, { ...newDayOff, id: Date.now().toString() }]);
+    addToast(`Day off "${newDayOff.label || 'Day Off'}" added successfully`);
+  };
+
+  const handleDeleteDayOff = (id) => {
+    setDaysOff(prev => prev.filter(d => d.id !== id));
+    addToast('Day off removed', 'info');
+  };
+
+  const handleAddSwap = (date1, date2) => {
+    if (!date1 || !date2 || date1 === date2) return;
+    setSwappedDays(prev => {
+      const exists = prev.some(s => s.date1 === date1 || s.date2 === date1 || s.date1 === date2 || s.date2 === date2);
+      if (exists) {
+        alert("One of these dates is already swapped. Remove the existing swap first.");
+        return prev;
+      }
+      return [...prev, { id: Date.now().toString(), date1, date2 }];
+    });
+    addToast('Day swap created successfully');
+  };
+
+  const handleDeleteSwap = (id) => {
+    setSwappedDays(prev => prev.filter(s => s.id !== id));
+    addToast('Day swap removed', 'info');
+  };
+
+  // Get full list of instructors across all loaded sessions
+  const allInstructorsList = useMemo(() => {
+    return [...new Set(allSessions.map(s => s.trainer))].filter(Boolean).sort();
+  }, [allSessions]);
+
+  // Retrieve sessions for any arbitrary date, respecting active filters
+  const getSessionsForDate = React.useCallback((dStr) => {
+    const isProjectDayOff = daysOff.some(doff => dStr >= doff.startDate && dStr <= doff.endDate);
+    if (isProjectDayOff) return [];
+
+    let resolvedDateStr = dStr;
+    const swap = swappedDays.find(s => s.date1 === dStr || s.date2 === dStr);
+    if (swap) {
+      resolvedDateStr = (swap.date1 === dStr) ? swap.date2 : swap.date1;
+    }
+
+    const { week, day } = getScheduleWeekAndDay(resolvedDateStr);
+    if (!week || !day) return [];
+
+    const targetWeekStr = String(week).toLowerCase().replace(/\s/g, '');
+
+    const list = [];
+    for (const session of allSessions) {
+      const sheetWeekStr = String(session.week).toLowerCase().replace(/\s/g, '');
+      if (sheetWeekStr === targetWeekStr && String(session.day).toLowerCase() === String(day).toLowerCase()) {
+        if (filters.track !== 'All' && session.track !== filters.track) continue;
+        if (filters.instructor !== 'All' && session.trainer !== filters.instructor) continue;
+        if (filters.lab !== 'All' && session.lab !== filters.lab) continue;
+        if (filters.search) {
+          const query = normalizeText(filters.search);
+          const matchText = [session.track, session.trainer, session.lab, session.category, session.time]
+            .map(normalizeText)
+            .join(' ');
+          if (!matchText.includes(query)) continue;
+        }
+
+        list.push(session);
+      }
+    }
+    return list;
+  }, [allSessions, daysOff, swappedDays, filters]);
 
   // Sync filters to URL Search parameters
   useEffect(() => {
@@ -243,6 +347,7 @@ export default function App() {
 
   // Manual refresh trigger
   const refreshData = React.useCallback(() => {
+    setIsBackgroundRefreshing(true);
     setRefreshKey(k => k + 1);
   }, []);
 
@@ -256,6 +361,7 @@ export default function App() {
     async function loadData() {
       // On background refreshes, don't show the full-screen spinner
       if (allSessions.length === 0) setIsLoading(true);
+      else setIsBackgroundRefreshing(true);
       setErrorMsg('');
       try {
         // 1. Fetch trainer emails from Google Sheet first
@@ -332,7 +438,10 @@ export default function App() {
           setErrorMsg("Failed to fetch schedules. Please check your internet connection and sheet access.");
         }
       } finally {
-        if (active) setIsLoading(false);
+        if (active) {
+          setIsLoading(false);
+          setIsBackgroundRefreshing(false);
+        }
       }
     }
 
@@ -359,56 +468,64 @@ export default function App() {
 
   // Compute occurrences (filtered sessions)
   const occurrences = useMemo(() => {
-    const datesSet = new Set(selectedDates);
+    const list = [];
 
-    return allSessions.filter(session => {
-      // Find matching dates for this session's week and day
-      let matchesDate = false;
-      let targetDateStr = null;
-      let targetFormattedDate = null;
+    for (const dStr of selectedDates) {
+      // Check if this date is a project day off
+      const isProjectDayOff = daysOff.some(doff => dStr >= doff.startDate && dStr <= doff.endDate);
+      if (isProjectDayOff) continue;
 
-      for (const dStr of selectedDates) {
-        const { week, day, formattedDate } = getScheduleWeekAndDay(dStr);
-        if (!week || !day) continue;
+      // Check if this date is swapped with another
+      let resolvedDateStr = dStr;
+      let swappedWithFormatted = null;
+      const swap = swappedDays.find(s => s.date1 === dStr || s.date2 === dStr);
+      if (swap) {
+        resolvedDateStr = (swap.date1 === dStr) ? swap.date2 : swap.date1;
+        const targetObj = getScheduleWeekAndDay(resolvedDateStr);
+        swappedWithFormatted = targetObj.formattedDate;
+      }
 
+      const { week, day, formattedDate } = getScheduleWeekAndDay(resolvedDateStr);
+      if (!week || !day) continue;
+
+      const targetWeekStr = String(week).toLowerCase().replace(/\s/g, '');
+
+      for (const session of allSessions) {
         const sheetWeekStr = String(session.week).toLowerCase().replace(/\s/g, '');
-        const targetWeekStr = String(week).toLowerCase().replace(/\s/g, '');
 
         if (sheetWeekStr === targetWeekStr && String(session.day).toLowerCase() === String(day).toLowerCase()) {
-          matchesDate = true;
-          targetDateStr = dStr;
-          targetFormattedDate = formattedDate;
-          break; // Matches the first matching date in the selection
+          // Track filter
+          if (filters.track !== 'All' && session.track !== filters.track) continue;
+
+          // Instructor filter
+          if (filters.instructor !== 'All' && session.trainer !== filters.instructor) continue;
+
+          // Lab filter
+          if (filters.lab !== 'All' && session.lab !== filters.lab) continue;
+
+          // Search text filter
+          if (filters.search) {
+            const query = normalizeText(filters.search);
+            const matchText = [session.track, session.trainer, session.lab, session.category, session.time]
+              .map(normalizeText)
+              .join(' ');
+            if (!matchText.includes(query)) continue;
+          }
+
+          // Create a new occurrence object to prevent mutating allSessions directly
+          // and allow projecting onto multiple dates in a long range
+          list.push({
+            ...session,
+            dateStr: dStr,
+            formattedDate: getScheduleWeekAndDay(dStr).formattedDate,
+            swappedWith: swappedWithFormatted
+          });
         }
       }
+    }
 
-      if (!matchesDate) return false;
-
-      // Track filter
-      if (filters.track !== 'All' && session.track !== filters.track) return false;
-
-      // Instructor filter
-      if (filters.instructor !== 'All' && session.trainer !== filters.instructor) return false;
-
-      // Lab filter
-      if (filters.lab !== 'All' && session.lab !== filters.lab) return false;
-
-      // Search text filter
-      if (filters.search) {
-        const query = normalizeText(filters.search);
-        const matchText = [session.track, session.trainer, session.lab, session.category, session.time]
-          .map(normalizeText)
-          .join(' ');
-        if (!matchText.includes(query)) return false;
-      }
-
-      // Populate occurrence details
-      session.dateStr = targetDateStr;
-      session.formattedDate = targetFormattedDate;
-
-      return true;
-    });
-  }, [allSessions, selectedDates, filters]);
+    return list;
+  }, [allSessions, selectedDates, filters, swappedDays, daysOff]);
 
   // Compute dynamic lists for dropdown selectors
   const filterOptions = useMemo(() => {
@@ -555,7 +672,8 @@ export default function App() {
           session.time === sessionToUpdate.time &&
           session.track === sessionToUpdate.track &&
           session.lab === sessionToUpdate.lab &&
-          session.category === sessionToUpdate.category
+          session.category === sessionToUpdate.category &&
+          session.trainer === sessionToUpdate.trainer
         ) {
           return {
             ...session,
@@ -567,6 +685,7 @@ export default function App() {
       });
     });
     setActiveEditSession(null);
+    addToast(`Instructor replaced with ${newInstructorName}`);
   };
 
   const buildEmailText = (instructorName, sessions) => {
@@ -591,12 +710,18 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {isBackgroundRefreshing && (
+        <div className="refresh-bar">
+          <div className="refresh-bar-inner" />
+        </div>
+      )}
+
       <DashboardHeader
         isDark={isDark}
         toggleTheme={toggleTheme}
         lastUpdated={lastUpdated}
         onRefresh={refreshData}
-        isRefreshing={isLoading}
+        isRefreshing={isLoading || isBackgroundRefreshing}
       />
 
       {isLoading ? (
@@ -640,6 +765,19 @@ export default function App() {
             handleFileUpload={handleFileUpload}
           />
 
+          <InteractiveCalendar
+            filters={filters}
+            setFilters={setFilters}
+            daysOff={daysOff}
+            onAddDayOff={handleAddDayOff}
+            onDeleteDayOff={handleDeleteDayOff}
+            swappedDays={swappedDays}
+            onAddSwap={handleAddSwap}
+            onDeleteSwap={handleDeleteSwap}
+            getSessionsForDate={getSessionsForDate}
+            getScheduleWeekAndDay={getScheduleWeekAndDay}
+          />
+
           <div className="card" style={{ padding: '0.75rem 1.25rem', marginBottom: '1.5rem', backgroundColor: 'var(--accent-light)', borderColor: 'var(--accent-color)', color: 'var(--accent-color)', fontWeight: 700, borderRadius: '12px' }}>
             {selectedDates.length === 1 ? (
               <span>📅 Showing schedule for {new Date(selectedDates[0] + 'T00:00:00').toLocaleDateString('en-GB')}</span>
@@ -654,15 +792,27 @@ export default function App() {
               getScheduleWeekAndDay={getScheduleWeekAndDay}
               occurrences={occurrences}
               onEditSession={setActiveEditSession}
+              swappedDays={swappedDays}
             />
 
-            <ReminderPanel
-              occurrences={occurrences}
-              instructorEmailMap={instructorEmailMap}
-              getInstructorEmail={getInstructorEmail}
-              onComposeEmail={handleComposeEmailClick}
-              onEditSession={setActiveEditSession}
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <ReminderPanel
+                occurrences={occurrences}
+                instructorEmailMap={instructorEmailMap}
+                getInstructorEmail={getInstructorEmail}
+                onComposeEmail={handleComposeEmailClick}
+                onEditSession={setActiveEditSession}
+              />
+
+              <VacationSwapPanel
+                daysOff={daysOff}
+                onAddDayOff={handleAddDayOff}
+                onDeleteDayOff={handleDeleteDayOff}
+                swappedDays={swappedDays}
+                onAddSwap={handleAddSwap}
+                onDeleteSwap={handleDeleteSwap}
+              />
+            </div>
           </div>
           
           {activePreviewEmail && (
@@ -675,11 +825,20 @@ export default function App() {
           {activeEditSession && (
             <ReplaceInstructorModal
               session={activeEditSession}
-              instructors={filterOptions.instructors}
+              instructors={allInstructorsList}
               onSave={handleReplaceInstructor}
               onClose={() => setActiveEditSession(null)}
             />
           )}
+
+          {/* Toast Notifications */}
+          <div className="toast-container">
+            {toasts.map(toast => (
+              <div key={toast.id} className={`toast toast-${toast.type}`}>
+                {toast.type === 'success' ? '✅' : 'ℹ️'} {toast.message}
+              </div>
+            ))}
+          </div>
         </>
       )}
     </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Clock, Monitor, User, Coffee, CalendarRange, RefreshCw } from 'lucide-react';
 
-export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occurrences, onEditSession }) {
+export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occurrences, onEditSession, swappedDays }) {
   if (selectedDates.length === 0) {
     return (
       <div className="card placeholder-text">
@@ -15,20 +15,8 @@ export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occ
     const { week, day, formattedDate } = getScheduleWeekAndDay(dateStr);
     if (!week || !day) return null;
 
-    if (day === 'Thursday' || day === 'Friday') {
-      return (
-        <div key={dateStr} className="day-group">
-          <h3 className="day-title">
-            <span>{formattedDate} - {day}</span>
-            <span className="badge badge-track" style={{ fontSize: '0.7rem' }}>{week}</span>
-          </h3>
-          <div className="weekend-box">
-            <Coffee size={20} />
-            Take a rest! It's the weekend. 🎉
-          </div>
-        </div>
-      );
-    }
+    const swap = swappedDays?.find(s => s.date1 === dateStr || s.date2 === dateStr);
+    const swappedWithFormatted = swap ? getScheduleWeekAndDay(swap.date1 === dateStr ? swap.date2 : swap.date1).formattedDate : null;
 
     const daySessions = occurrences.filter(occurrence => occurrence.dateStr === dateStr);
 
@@ -38,11 +26,42 @@ export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occ
       return timeA - timeB;
     });
 
+    const targetDateStr = swap ? (swap.date1 === dateStr ? swap.date2 : swap.date1) : dateStr;
+    const targetDayObj = getScheduleWeekAndDay(targetDateStr);
+    const targetIsWeekend = targetDayObj.day === 'Thursday' || targetDayObj.day === 'Friday';
+
+    if (targetIsWeekend && daySessions.length === 0) {
+      return (
+        <div key={dateStr} className="day-group">
+          <h3 className="day-title">
+            <span>{formattedDate} - {day}</span>
+            <span className="badge badge-track" style={{ fontSize: '0.7rem' }}>{week}</span>
+            {swappedWithFormatted && (
+              <span className="badge badge-success" style={{ fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <RefreshCw size={10} />
+                Swapped with {swappedWithFormatted}
+              </span>
+            )}
+          </h3>
+          <div className="weekend-box">
+            <Coffee size={20} />
+            {swap ? `Take a rest! Swapped with weekend (${swappedWithFormatted}) 🎉` : "Take a rest! It's the weekend. 🎉"}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div key={dateStr} className="day-group">
         <h3 className="day-title">
           <span>{formattedDate} - {day}</span>
           <span className="badge badge-track" style={{ fontSize: '0.7rem' }}>{week}</span>
+          {swappedWithFormatted && (
+            <span className="badge badge-success" style={{ fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+              <RefreshCw size={10} />
+              Swapped with {swappedWithFormatted}
+            </span>
+          )}
         </h3>
 
         {daySessions.length === 0 ? (
@@ -63,7 +82,7 @@ export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occ
               </thead>
               <tbody>
                 {daySessions.map((session, idx) => (
-                  <tr key={idx}>
+                  <tr key={`${session.track}-${session.trainer}-${session.time}-${idx}`}>
                     <td className="time-col" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                         <Clock size={14} style={{ color: 'var(--text-muted)' }} />
@@ -81,6 +100,11 @@ export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occ
                             {session.trainer}
                           </span>
                         </span>
+                        {session.isOnVacation && (
+                          <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <span>🏖️ Vacation</span>
+                          </span>
+                        )}
                         {session.originalTrainer && session.originalTrainer !== session.trainer && (
                           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
                             (ex: {session.originalTrainer})
@@ -89,7 +113,7 @@ export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occ
                         <button
                           type="button"
                           className="btn btn-secondary"
-                          style={{ padding: '0.2rem 0.4rem', borderRadius: '4px', fontSize: '0.65rem', minWidth: 'auto', height: '22px' }}
+                          style={{ padding: '0.25rem 0.4rem', borderRadius: '4px', fontSize: '0.65rem', minWidth: 'auto', height: '22px' }}
                           onClick={() => onEditSession(session)}
                           title="Replace Instructor for this session"
                         >
