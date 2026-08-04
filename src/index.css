@@ -744,6 +744,127 @@ html.dark .track-innov-prompt {
   color: var(--danger-color);
 }
 
+/* Session Indicator Dots for Mobile Grid View */
+.calendar-dots-container {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.calendar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.calendar-dot-count {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+
+/* Agenda View for Mobile & Tablet */
+.calendar-agenda-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 450px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.calendar-agenda-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+}
+
+.calendar-agenda-item:hover,
+.calendar-agenda-item.selected {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-light);
+  transform: translateY(-1px);
+}
+
+.calendar-agenda-date {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+/* Session Display: Mobile Cards vs Desktop Table */
+.desktop-session-table {
+  display: block;
+}
+
+.mobile-session-list {
+  display: none;
+}
+
+.mobile-session-card {
+  background-color: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 1rem;
+  margin-bottom: 0.85rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: transform var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+
+.mobile-session-card:hover {
+  border-color: var(--accent-color);
+}
+
+.mobile-session-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--card-border);
+  padding-bottom: 0.6rem;
+}
+
+.mobile-session-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.mobile-session-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.mobile-filter-accordion-toggle {
+  display: none;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
 /* ============================================= */
 /* Responsive Design — Mobile & Tablet           */
 /* ============================================= */
@@ -764,21 +885,38 @@ html.dark .track-innov-prompt {
   }
 
   h1 {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
+  }
+
+  /* Show filter toggle accordion on mobile */
+  .mobile-filter-accordion-toggle {
+    display: flex;
+  }
+
+  .grid-filters-container.collapsed {
+    display: none;
   }
 
   .grid-filters {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
+    margin-top: 0.75rem;
   }
 
   .grid-kpi {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
   }
 
   .kpi-card {
     padding: 0.85rem;
+    gap: 0.75rem;
+  }
+
+  .kpi-icon-wrapper {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
   }
 
   .kpi-value {
@@ -787,13 +925,25 @@ html.dark .track-innov-prompt {
 
   .card {
     padding: 1rem;
-    border-radius: 12px;
+    border-radius: 14px;
+    margin-bottom: 1rem;
+  }
+
+  /* Switch ScheduleList from table to touch cards on mobile */
+  .desktop-session-table {
+    display: none;
+  }
+
+  .mobile-session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
   }
 
   /* Calendar cells smaller on mobile */
   .calendar-cell {
-    min-height: 60px;
-    padding: 0.25rem;
+    min-height: 52px;
+    padding: 0.25rem 0.15rem;
     border-radius: 8px;
   }
 
@@ -812,13 +962,14 @@ html.dark .track-innov-prompt {
 
   .calendar-weekday {
     font-size: 0.65rem;
+    padding: 0.35rem 0;
   }
 
   .calendar-grid {
     gap: 3px;
   }
 
-  /* Tables scroll horizontally */
+  /* Table horizontal scroll fallback */
   .table-container {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -831,28 +982,54 @@ html.dark .track-innov-prompt {
     white-space: nowrap;
   }
 
-  /* Modal full-width on mobile */
+  /* Modal bottom sheet / responsive modal */
+  .modal-backdrop {
+    padding: 0.75rem;
+  }
+
   .modal-content {
-    width: 95% !important;
-    max-width: 95% !important;
-    margin: 0.5rem;
-    border-radius: 12px;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0;
+    border-radius: 16px;
+    max-height: 85vh;
   }
 
   .btn {
-    padding: 0.5rem 0.85rem;
+    padding: 0.55rem 0.85rem;
     font-size: 0.8rem;
+    min-height: 38px;
   }
 
   .reminder-card-header {
     flex-direction: column;
-    gap: 0.5rem;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .reminder-card-header .btn {
+    width: 100%;
+  }
+
+  .toast-container {
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+  }
+  
+  .toast {
+    width: 100%;
+    justify-content: center;
   }
 }
 
-@media (max-width: 480px) {
-  .grid-kpi {
+@media (max-width: 520px) {
+  .grid-filters {
     grid-template-columns: 1fr;
+  }
+
+  .grid-kpi {
+    grid-template-columns: 1fr 1fr;
   }
 
   .calendar-cell {
@@ -863,13 +1040,21 @@ html.dark .track-innov-prompt {
     display: none;
   }
 
-  .calendar-meta-badge {
-    display: none;
+  .calendar-dots-container {
+    display: flex;
   }
 
   .day-title {
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
     font-size: 1rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .grid-kpi {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -947,3 +1132,4 @@ html.dark .track-innov-prompt {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(350%); }
 }
+

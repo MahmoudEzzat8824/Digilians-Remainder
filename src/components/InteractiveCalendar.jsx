@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, CalendarOff, ArrowLeftRight, Trash2, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, CalendarOff, ArrowLeftRight, Trash2, Check, LayoutGrid, List } from 'lucide-react';
 
 export default function InteractiveCalendar({
   filters,
@@ -18,6 +18,9 @@ export default function InteractiveCalendar({
   
   const [currentYear, setCurrentYear] = useState(year || 2026);
   const [currentMonth, setCurrentMonth] = useState(month - 1 || 6); // 0-indexed, default July (6)
+
+  // View mode: 'grid' or 'agenda'
+  const [viewMode, setViewMode] = useState('grid');
 
   // Quick Action form state for selected date
   const [showDayOffForm, setShowDayOffForm] = useState(false);
@@ -66,7 +69,7 @@ export default function InteractiveCalendar({
     }
   };
 
-  // Generate calendar days
+  // Generate calendar days for Grid View
   const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay(); // 0 is Sunday
   const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
   const prevMonthTotalDays = new Date(currentYear, currentMonth, 0).getDate();
@@ -141,7 +144,6 @@ export default function InteractiveCalendar({
       fromDate: dateStr,
       toDate: dateStr
     }));
-    // Hide forms initially
     setShowDayOffForm(false);
     setShowSwapForm(false);
   };
@@ -196,6 +198,13 @@ export default function InteractiveCalendar({
     'Data Analysis': 'track-data-analysis',
     'Media Production': 'track-media-production',
     'Innov/Prompt': 'track-innov-prompt'
+  };
+
+  const trackDotBg = {
+    'Coaching': '#2563eb',
+    'Data Analysis': '#8b5cf6',
+    'Media Production': '#10b981',
+    'Innov/Prompt': '#d97706'
   };
 
   const renderTooltipContent = () => {
@@ -266,21 +275,49 @@ export default function InteractiveCalendar({
     );
   };
 
+  // Agenda items for the current month
+  const currentMonthDays = days.filter(d => d.isCurrentMonth);
+
   return (
     <div className="card calendar-container" style={{ position: 'relative' }}>
-      <div className="calendar-header">
-        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Calendar size={20} style={{ color: 'var(--accent-color)' }} />
-          <span>{months[currentMonth]} {currentYear}</span>
-        </h2>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <div className="calendar-header" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.15rem' }}>
+            <Calendar size={20} style={{ color: 'var(--accent-color)' }} />
+            <span>{months[currentMonth]} {currentYear}</span>
+          </h2>
+
+          {/* Grid / Agenda View Toggle */}
+          <div style={{ display: 'inline-flex', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--card-border)' }}>
+            <button
+              type="button"
+              className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              title="Month Grid View"
+              style={{ borderRadius: '8px 0 0 8px' }}
+            >
+              <LayoutGrid size={14} />
+            </button>
+            <button
+              type="button"
+              className={`view-toggle-btn ${viewMode === 'agenda' ? 'active' : ''}`}
+              onClick={() => setViewMode('agenda')}
+              title="Month Agenda View"
+              style={{ borderRadius: '0 8px 8px 0', borderLeft: 'none' }}
+            >
+              <List size={14} />
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <button type="button" className="btn btn-secondary" style={{ padding: '0.4rem', minWidth: 'auto' }} onClick={handlePrevMonth}>
             <ChevronLeft size={16} />
           </button>
           <button
             type="button"
             className="btn btn-primary"
-            style={{ padding: '0.4rem 0.75rem', fontSize: '0.75rem' }}
+            style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem' }}
             onClick={() => {
               const now = new Date();
               const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -296,78 +333,181 @@ export default function InteractiveCalendar({
           >
             Today
           </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem' }}
+            onClick={() => {
+              const tom = new Date();
+              tom.setDate(tom.getDate() + 1);
+              const tomStr = `${tom.getFullYear()}-${String(tom.getMonth() + 1).padStart(2, '0')}-${String(tom.getDate()).padStart(2, '0')}`;
+              setCurrentYear(tom.getFullYear());
+              setCurrentMonth(tom.getMonth());
+              setFilters(prev => ({
+                ...prev,
+                dateMode: 'today',
+                fromDate: tomStr,
+                toDate: tomStr
+              }));
+            }}
+          >
+            Tomorrow
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem' }}
+            onClick={() => {
+              const now = new Date();
+              const end = new Date();
+              end.setDate(now.getDate() + 6);
+              const fromStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+              const toStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+              setCurrentYear(now.getFullYear());
+              setCurrentMonth(now.getMonth());
+              setFilters(prev => ({
+                ...prev,
+                dateMode: 'range',
+                fromDate: fromStr,
+                toDate: toStr
+              }));
+            }}
+          >
+            This Week
+          </button>
           <button type="button" className="btn btn-secondary" style={{ padding: '0.4rem', minWidth: 'auto' }} onClick={handleNextMonth}>
             <ChevronRight size={16} />
           </button>
         </div>
       </div>
 
-      <div className="calendar-grid">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-          <div key={d} className="calendar-weekday">{d}</div>
-        ))}
-
-        {days.map((day, idx) => {
-          const daySessions = getSessionsForDate(day.dateStr);
-          const isSelected = selectedDateStr === day.dateStr;
-          const dayOff = daysOff.find(doff => day.dateStr >= doff.startDate && day.dateStr <= doff.endDate);
-          const swap = swappedDays.find(s => s.date1 === day.dateStr || s.date2 === day.dateStr);
-          
-          const dateObj = new Date(day.dateStr + 'T00:00:00');
-          const isWeekend = dateObj.getDay() === 4 || dateObj.getDay() === 5; // Thursday/Friday
-
-          let cellClass = 'calendar-cell';
-          if (isSelected) cellClass += ' selected';
-          if (!day.isCurrentMonth) cellClass += ' other-month';
-          if (dayOff) cellClass += ' day-off-cell';
-          else if (swap) cellClass += ' swapped-cell';
-          else if (isWeekend) cellClass += ' weekend';
-
-          return (
-            <div
-              key={idx}
-              className={cellClass}
-              onClick={() => handleDayClick(day.dateStr)}
-              onContextMenu={(e) => handleContextMenu(e, day.dateStr)}
-              onMouseEnter={(e) => handleMouseEnter(e, day.dateStr)}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                <span className="calendar-day-number">{day.dayNum}</span>
-                {dayOff && <span style={{ fontSize: '0.65rem' }}>🏖️</span>}
-                {swap && <span style={{ fontSize: '0.65rem' }}>🔄</span>}
-              </div>
-
-              <div className="calendar-day-badges">
-                {dayOff ? (
-                  <span className="calendar-session-badge" style={{ backgroundColor: 'var(--danger-border)', color: 'var(--danger-text)' }} title={dayOff.label}>
-                    {dayOff.label}
-                  </span>
-                ) : swap ? (
-                  <span className="calendar-session-badge" style={{ backgroundColor: 'var(--success-border)', color: 'var(--success-text)' }}>
-                    Swapped
-                  </span>
-                ) : (
-                  daySessions.slice(0, 3).map((session, sIdx) => {
-                    const colorClass = trackColors[session.track] || 'track-default';
-                    return (
-                      <span key={sIdx} className={`calendar-session-badge ${colorClass}`} title={`${session.time} | ${session.trainer}`}>
-                        {session.time.split(' ')[0]} {session.trainer.split(' ')[0]}
-                      </span>
-                    );
-                  })
-                )}
-                {!dayOff && !swap && daySessions.length > 3 && (
-                  <span className="calendar-meta-badge">
-                    +{daySessions.length - 3} more
-                  </span>
-                )}
-              </div>
+      {viewMode === 'grid' ? (
+        <div className="calendar-grid">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+            <div key={d} className="calendar-weekday">
+              <span>{d}</span>
             </div>
-          );
-        })}
-      </div>
+          ))}
+
+          {days.map((day, idx) => {
+            const daySessions = getSessionsForDate(day.dateStr);
+            const isSelected = selectedDateStr === day.dateStr;
+            const dayOff = daysOff.find(doff => day.dateStr >= doff.startDate && day.dateStr <= doff.endDate);
+            const swap = swappedDays.find(s => s.date1 === day.dateStr || s.date2 === day.dateStr);
+            
+            const dateObj = new Date(day.dateStr + 'T00:00:00');
+            const isWeekend = dateObj.getDay() === 4 || dateObj.getDay() === 5; // Thursday/Friday
+
+            let cellClass = 'calendar-cell';
+            if (isSelected) cellClass += ' selected';
+            if (!day.isCurrentMonth) cellClass += ' other-month';
+            if (dayOff) cellClass += ' day-off-cell';
+            else if (swap) cellClass += ' swapped-cell';
+            else if (isWeekend) cellClass += ' weekend';
+
+            return (
+              <div
+                key={idx}
+                className={cellClass}
+                onClick={() => handleDayClick(day.dateStr)}
+                onContextMenu={(e) => handleContextMenu(e, day.dateStr)}
+                onMouseEnter={(e) => handleMouseEnter(e, day.dateStr)}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <span className="calendar-day-number">{day.dayNum}</span>
+                  {dayOff && <span style={{ fontSize: '0.65rem' }}>🏖️</span>}
+                  {swap && <span style={{ fontSize: '0.65rem' }}>🔄</span>}
+                </div>
+
+                {/* Desktop Text Badges */}
+                <div className="calendar-day-badges">
+                  {dayOff ? (
+                    <span className="calendar-session-badge" style={{ backgroundColor: 'var(--danger-border)', color: 'var(--danger-text)' }} title={dayOff.label}>
+                      {dayOff.label}
+                    </span>
+                  ) : swap ? (
+                    <span className="calendar-session-badge" style={{ backgroundColor: 'var(--success-border)', color: 'var(--success-text)' }}>
+                      Swapped
+                    </span>
+                  ) : (
+                    daySessions.slice(0, 3).map((session, sIdx) => {
+                      const colorClass = trackColors[session.track] || 'track-default';
+                      return (
+                        <span key={sIdx} className={`calendar-session-badge ${colorClass}`} title={`${session.time} | ${session.trainer}`}>
+                          {session.time.split(' ')[0]} {session.trainer.split(' ')[0]}
+                        </span>
+                      );
+                    })
+                  )}
+                  {!dayOff && !swap && daySessions.length > 3 && (
+                    <span className="calendar-meta-badge">
+                      +{daySessions.length - 3} more
+                    </span>
+                  )}
+                </div>
+
+                {/* Mobile Dot Indicators */}
+                {!dayOff && !swap && daySessions.length > 0 && (
+                  <div className="calendar-dots-container">
+                    {daySessions.slice(0, 4).map((session, sIdx) => (
+                      <span
+                        key={sIdx}
+                        className="calendar-dot"
+                        style={{ backgroundColor: trackDotBg[session.track] || 'var(--accent-color)' }}
+                      />
+                    ))}
+                    {daySessions.length > 4 && (
+                      <span className="calendar-dot-count">+{daySessions.length - 4}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* Agenda View for Mobile & Compact layout */
+        <div className="calendar-agenda-list">
+          {currentMonthDays.map((day) => {
+            const daySessions = getSessionsForDate(day.dateStr);
+            const isSelected = selectedDateStr === day.dateStr;
+            const dayOff = daysOff.find(doff => day.dateStr >= doff.startDate && day.dateStr <= doff.endDate);
+            const swap = swappedDays.find(s => s.date1 === day.dateStr || s.date2 === day.dateStr);
+            const { day: dayName, formattedDate } = getScheduleWeekAndDay(day.dateStr);
+
+            return (
+              <div
+                key={day.dateStr}
+                className={`calendar-agenda-item ${isSelected ? 'selected' : ''}`}
+                onClick={() => handleDayClick(day.dateStr)}
+              >
+                <div className="calendar-agenda-date">
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                    {formattedDate} - {dayName}
+                  </strong>
+                  {dayOff && <span style={{ fontSize: '0.75rem', color: 'var(--danger-color)', fontWeight: 600 }}>🏖️ {dayOff.label}</span>}
+                  {swap && <span style={{ fontSize: '0.75rem', color: 'var(--success-color)', fontWeight: 600 }}>🔄 Swapped Day</span>}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  {daySessions.length > 0 && (
+                    <span className="badge badge-track">
+                      {daySessions.length} Session{daySessions.length === 1 ? '' : 's'}
+                    </span>
+                  )}
+                  {daySessions.length === 0 && !dayOff && !swap && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                      {dayName === 'Thursday' || dayName === 'Friday' ? 'Weekend' : 'Off'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Floating Hover Tooltip */}
       {hoveredDate && (
@@ -504,7 +644,7 @@ export default function InteractiveCalendar({
               </strong>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               {!selectedDayOff && !selectedSwap && (
                 <>
                   <button
@@ -555,21 +695,21 @@ export default function InteractiveCalendar({
           </div>
 
           {showDayOffForm && (
-            <form onSubmit={handleAddDayOffSubmit} style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid var(--card-border)', paddingTop: '0.75rem', alignItems: 'flex-end' }}>
-              <div style={{ flex: 1 }}>
+            <form onSubmit={handleAddDayOffSubmit} style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid var(--card-border)', paddingTop: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: '200px' }}>
                 <label className="label-text" htmlFor="cal-dayoff-label">Holiday / Day Off Name</label>
                 <input
                   id="cal-dayoff-label"
                   type="text"
                   placeholder="e.g. Eid Holiday"
                   className="input-control"
-                  style={{ padding: '0.4rem 0.75rem', height: '32px' }}
+                  style={{ padding: '0.4rem 0.75rem', height: '36px' }}
                   value={dayOffLabel}
                   onChange={(e) => setDayOffLabel(e.target.value)}
                   autoFocus
                 />
               </div>
-              <button type="submit" className="btn btn-primary" style={{ height: '32px', padding: '0.4rem 0.75rem', fontSize: '0.75rem' }}>
+              <button type="submit" className="btn btn-primary" style={{ height: '36px', padding: '0.4rem 0.75rem', fontSize: '0.75rem' }}>
                 <Check size={14} />
                 Save Day Off
               </button>
@@ -577,20 +717,20 @@ export default function InteractiveCalendar({
           )}
 
           {showSwapForm && (
-            <form onSubmit={handleAddSwapSubmit} style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid var(--card-border)', paddingTop: '0.75rem', alignItems: 'flex-end' }}>
-              <div style={{ flex: 1 }}>
+            <form onSubmit={handleAddSwapSubmit} style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid var(--card-border)', paddingTop: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: '200px' }}>
                 <label className="label-text" htmlFor="cal-swap-date">Select Date to Swap With</label>
                 <input
                   id="cal-swap-date"
                   type="date"
                   className="input-control"
-                  style={{ padding: '0.4rem 0.75rem', height: '32px' }}
+                  style={{ padding: '0.4rem 0.75rem', height: '36px' }}
                   value={swapTargetDate}
                   onChange={(e) => setSwapTargetDate(e.target.value)}
                   autoFocus
                 />
               </div>
-              <button type="submit" className="btn btn-primary" style={{ height: '32px', padding: '0.4rem 0.75rem', fontSize: '0.75rem' }}>
+              <button type="submit" className="btn btn-primary" style={{ height: '36px', padding: '0.4rem 0.75rem', fontSize: '0.75rem' }}>
                 <Check size={14} />
                 Confirm Swap
               </button>

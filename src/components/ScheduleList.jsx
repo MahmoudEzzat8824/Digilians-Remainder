@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Monitor, User, Coffee, CalendarRange, RefreshCw } from 'lucide-react';
+import { Clock, Monitor, User, Coffee, CalendarRange, RefreshCw, Tag } from 'lucide-react';
 
 export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occurrences, onEditSession, swappedDays }) {
   if (selectedDates.length === 0) {
@@ -69,73 +69,130 @@ export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occ
             No matching sessions for this date and selected filters.
           </div>
         ) : (
-          <div className="table-container">
-            <table className="session-table">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Track</th>
-                  <th>Instructor</th>
-                  <th>Category</th>
-                  <th>Lab</th>
-                </tr>
-              </thead>
-              <tbody>
-                {daySessions.map((session, idx) => (
-                  <tr key={`${session.track}-${session.trainer}-${session.time}-${idx}`}>
-                    <td className="time-col" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <Clock size={14} style={{ color: 'var(--text-muted)' }} />
-                        {session.time}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-track">{session.track}</span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span className="badge" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent-color)' }}>
+          <>
+            {/* Desktop Table View */}
+            <div className="table-container desktop-session-table">
+              <table className="session-table">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Track</th>
+                    <th>Instructor</th>
+                    <th>Category</th>
+                    <th>Lab</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {daySessions.map((session, idx) => (
+                    <tr key={`${session.track}-${session.trainer}-${session.time}-${idx}`}>
+                      <td className="time-col" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <Clock size={14} style={{ color: 'var(--text-muted)' }} />
+                          {session.time}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge badge-track">{session.track}</span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span className="badge" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent-color)' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <User size={12} />
+                              {session.trainer}
+                            </span>
+                          </span>
+                          {session.isOnVacation && (
+                            <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span>🏖️ Vacation</span>
+                            </span>
+                          )}
+                          {session.originalTrainer && session.originalTrainer !== session.trainer && (
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
+                              (ex: {session.originalTrainer})
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            style={{ padding: '0.25rem 0.4rem', borderRadius: '4px', fontSize: '0.65rem', minWidth: 'auto', height: '22px' }}
+                            onClick={() => onEditSession(session)}
+                            title="Replace Instructor for this session"
+                          >
+                            <RefreshCw size={10} />
+                            Replace
+                          </button>
+                        </div>
+                      </td>
+                      <td>{session.category}</td>
+                      <td>
+                        <span className="badge badge-lab">
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                            <User size={12} />
-                            {session.trainer}
+                            <Monitor size={12} />
+                            {session.lab}
                           </span>
                         </span>
-                        {session.isOnVacation && (
-                          <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                            <span>🏖️ Vacation</span>
-                          </span>
-                        )}
-                        {session.originalTrainer && session.originalTrainer !== session.trainer && (
-                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
-                            (ex: {session.originalTrainer})
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ padding: '0.25rem 0.4rem', borderRadius: '4px', fontSize: '0.65rem', minWidth: 'auto', height: '22px' }}
-                          onClick={() => onEditSession(session)}
-                          title="Replace Instructor for this session"
-                        >
-                          <RefreshCw size={10} />
-                          Replace
-                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Session Cards View */}
+            <div className="mobile-session-list">
+              {daySessions.map((session, idx) => (
+                <div key={`${session.track}-${session.trainer}-${session.time}-${idx}`} className="mobile-session-card">
+                  <div className="mobile-session-card-header">
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                      <Clock size={16} style={{ color: 'var(--accent-color)' }} />
+                      {session.time}
+                    </span>
+                    <span className="badge badge-track">{session.track}</span>
+                  </div>
+
+                  <div className="mobile-session-card-body">
+                    <div className="mobile-session-card-row">
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}>
+                        <User size={14} style={{ color: 'var(--accent-color)' }} />
+                        {session.trainer}
+                      </span>
+
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.7rem', height: '26px' }}
+                        onClick={() => onEditSession(session)}
+                      >
+                        <RefreshCw size={12} />
+                        Replace
+                      </button>
+                    </div>
+
+                    {session.originalTrainer && session.originalTrainer !== session.trainer && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                        Originally: {session.originalTrainer}
                       </div>
-                    </td>
-                    <td>{session.category}</td>
-                    <td>
+                    )}
+
+                    <div className="mobile-session-card-row" style={{ marginTop: '0.25rem' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        <Tag size={13} />
+                        {session.category}
+                      </span>
+
                       <span className="badge badge-lab">
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                           <Monitor size={12} />
                           {session.lab}
                         </span>
                       </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     );

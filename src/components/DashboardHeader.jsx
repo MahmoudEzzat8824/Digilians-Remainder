@@ -3,22 +3,21 @@ import { Sun, Moon, Calendar, RefreshCw, Wifi } from 'lucide-react';
 
 export default function DashboardHeader({ isDark, toggleTheme, lastUpdated, onRefresh, isRefreshing }) {
   const formattedDate = new Date().toLocaleDateString('en-GB', {
-    weekday: 'long',
+    weekday: 'short',
     year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric',
   });
 
   const lastUpdatedLabel = lastUpdated
-    ? `Synced at ${lastUpdated.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+    ? `Synced ${lastUpdated.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
     : 'Syncing…';
 
   return (
-    <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+    <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
       <div>
-        <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          Live Training Schedules
-          {/* Live indicator dot */}
+        <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <span>Live Training Schedules</span>
           <span title="Auto-refreshes every 5 minutes" style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
             fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.05em',
@@ -34,17 +33,16 @@ export default function DashboardHeader({ isDark, toggleTheme, lastUpdated, onRe
             LIVE
           </span>
         </h1>
-        <p style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.9rem', fontWeight: 500, flexWrap: 'wrap' }}>
-          <Calendar size={16} />
+        <p style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', fontWeight: 500, flexWrap: 'wrap', marginTop: '0.2rem' }}>
+          <Calendar size={15} />
           {formattedDate}
           <span style={{ opacity: 0.5 }}>·</span>
-          <Wifi size={14} />
+          <Wifi size={13} />
           <span style={{ fontSize: '0.8rem' }}>{lastUpdatedLabel}</span>
         </p>
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        {/* Manual Refresh Button */}
         <button
           onClick={onRefresh}
           disabled={isRefreshing}
@@ -63,15 +61,14 @@ export default function DashboardHeader({ isDark, toggleTheme, lastUpdated, onRe
           {isRefreshing ? 'Refreshing…' : 'Refresh'}
         </button>
 
-        {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
           className="btn btn-secondary"
-          style={{ width: '42px', height: '42px', padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ width: '40px', height: '40px', padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           id="theme-toggle-btn"
         >
-          {isDark ? <Sun size={20} style={{ color: '#fbbf24' }} /> : <Moon size={20} />}
+          {isDark ? <Sun size={19} style={{ color: '#fbbf24' }} /> : <Moon size={19} />}
         </button>
       </div>
 
