@@ -696,14 +696,45 @@ export default function App() {
     return intro + lines.join('\n') + outro;
   };
 
+  const buildWhatsAppText = (instructorName, sessions) => {
+    // Group sessions by date for better readability
+    const dateGroups = new Map();
+    sessions.forEach(session => {
+      const key = session.formattedDate || session.dateStr;
+      if (!dateGroups.has(key)) dateGroups.set(key, { day: session.day, sessions: [] });
+      dateGroups.get(key).sessions.push(session);
+    });
+
+    let text = `السلام عليكم يا *${instructorName}* 👋\n\n`;
+    text += `📋 *تذكير بالسيشنز القادمة:*\n`;
+    text += `━━━━━━━━━━━━━━━\n\n`;
+
+    [...dateGroups.entries()].forEach(([date, { day, sessions: daySessions }]) => {
+      text += `📅 *${date} (${day})*\n`;
+      daySessions.forEach(s => {
+        text += `   🕐 ${s.time}\n`;
+        text += `   📚 ${s.track} | 🏢 ${s.lab}\n`;
+        if (s.category) text += `   🏷️ ${s.category}\n`;
+        text += `\n`;
+      });
+    });
+
+    text += `━━━━━━━━━━━━━━━\n`;
+    text += `⚠️ *برجاء الحضور قبل الميعاد بوقت كافي*\n\n`;
+    text += `شكراً ليك 🙏`;
+    return text;
+  };
+
   const handleComposeEmailClick = (instructorName, sessions, emailAddress) => {
     const subject = `Reminder: Upcoming sessions for ${instructorName}`;
     const body = buildEmailText(instructorName, sessions);
+    const whatsappBody = buildWhatsAppText(instructorName, sessions);
     setActivePreviewEmail({
       instructorName,
       to: emailAddress || '',
       subject,
-      body
+      body,
+      whatsappBody
     });
   };
 
@@ -801,6 +832,8 @@ export default function App() {
                 getInstructorEmail={getInstructorEmail}
                 onComposeEmail={handleComposeEmailClick}
                 onEditSession={setActiveEditSession}
+                buildEmailText={buildEmailText}
+                buildWhatsAppText={buildWhatsAppText}
               />
 
               <VacationSwapPanel

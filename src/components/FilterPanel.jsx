@@ -42,6 +42,19 @@ export default function FilterPanel({
       const tomStr = formatDateInput(tom);
       setFilters(prev => ({ ...prev, dateMode: 'today', fromDate: tomStr, toDate: tomStr }));
     } else if (type === 'thisWeek') {
+      const dayOfWeek = now.getDay();
+      const diffToSat = dayOfWeek >= 6 ? 0 : dayOfWeek + 1;
+      const saturday = new Date(now);
+      saturday.setDate(now.getDate() - diffToSat);
+      const friday = new Date(saturday);
+      friday.setDate(saturday.getDate() + 6);
+      setFilters(prev => ({
+        ...prev,
+        dateMode: 'range',
+        fromDate: formatDateInput(saturday),
+        toDate: formatDateInput(friday)
+      }));
+    } else if (type === 'next7Days') {
       const start = new Date(now);
       const end = new Date(now);
       end.setDate(end.getDate() + 6);
@@ -69,14 +82,42 @@ export default function FilterPanel({
     filters.dateMode !== 'today'
   ].filter(Boolean).length;
 
-  const todayStr = formatDateInput(new Date());
-  const tom = new Date();
+  const now = new Date();
+  const todayStr = formatDateInput(now);
+
+  const tom = new Date(now);
   tom.setDate(tom.getDate() + 1);
   const tomorrowStr = formatDateInput(tom);
 
+  const dayOfWeek = now.getDay();
+  const diffToSat = dayOfWeek >= 6 ? 0 : dayOfWeek + 1;
+  const saturday = new Date(now);
+  saturday.setDate(now.getDate() - diffToSat);
+  const friday = new Date(saturday);
+  friday.setDate(saturday.getDate() + 6);
+  const saturdayStr = formatDateInput(saturday);
+  const fridayStr = formatDateInput(friday);
+
+  const next6 = new Date(now);
+  next6.setDate(now.getDate() + 6);
+  const next6Str = formatDateInput(next6);
+
   const isTodaySelected = filters.dateMode === 'today' && filters.fromDate === todayStr;
   const isTomorrowSelected = filters.dateMode === 'today' && filters.fromDate === tomorrowStr;
-  const isWeekSelected = filters.dateMode === 'range';
+  const isThisWeekSelected = filters.dateMode === 'range' && filters.fromDate === saturdayStr && filters.toDate === fridayStr;
+  const isNext7DaysSelected = filters.dateMode === 'range' && filters.fromDate === todayStr && filters.toDate === next6Str;
+
+  const getQuickBtnStyle = (isSelected) => ({
+    padding: '0.35rem 0.75rem',
+    fontSize: '0.75rem',
+    borderRadius: '20px',
+    fontWeight: isSelected ? 700 : 500,
+    backgroundColor: isSelected ? 'var(--accent-light)' : 'var(--input-bg)',
+    color: isSelected ? 'var(--accent-color)' : 'var(--text-main)',
+    border: isSelected ? '1px solid var(--accent-color)' : '1px solid var(--card-border)',
+    boxShadow: isSelected ? '0 0 0 2px var(--accent-light)' : 'none',
+    transition: 'all 0.2s ease'
+  });
 
   return (
     <div className="card filters-section">
@@ -107,27 +148,35 @@ export default function FilterPanel({
           </span>
           <button
             type="button"
-            className={`btn ${isTodaySelected ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', borderRadius: '20px' }}
+            className="btn"
+            style={getQuickBtnStyle(isTodaySelected)}
             onClick={() => handleQuickDateSelect('today')}
           >
             Today
           </button>
           <button
             type="button"
-            className={`btn ${isTomorrowSelected ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', borderRadius: '20px' }}
+            className="btn"
+            style={getQuickBtnStyle(isTomorrowSelected)}
             onClick={() => handleQuickDateSelect('tomorrow')}
           >
             Tomorrow
           </button>
           <button
             type="button"
-            className={`btn ${isWeekSelected ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', borderRadius: '20px' }}
+            className="btn"
+            style={getQuickBtnStyle(isThisWeekSelected)}
             onClick={() => handleQuickDateSelect('thisWeek')}
           >
-            Next 7 Days (Range)
+            This Week (Sat–Fri)
+          </button>
+          <button
+            type="button"
+            className="btn"
+            style={getQuickBtnStyle(isNext7DaysSelected)}
+            onClick={() => handleQuickDateSelect('next7Days')}
+          >
+            Next 7 Days
           </button>
         </div>
 

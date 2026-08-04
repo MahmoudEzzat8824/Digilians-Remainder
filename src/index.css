@@ -579,6 +579,7 @@ table.session-table tr:hover {
 
 .calendar-cell.selected {
   border-color: var(--accent-color);
+  background-color: var(--accent-light);
   box-shadow: 0 0 0 2px var(--accent-light);
 }
 

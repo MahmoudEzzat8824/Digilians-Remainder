@@ -11,6 +11,12 @@ export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occ
     );
   }
 
+  // Helper: parse time string like "10:00 - 12:00" into minutes for comparison
+  const parseTimeToMinutes = (timeStr) => {
+    const parts = timeStr.split(':').map(Number);
+    return (parts[0] || 0) * 60 + (parts[1] || 0);
+  };
+
   const renderedDays = selectedDates.map(dateStr => {
     const { week, day, formattedDate } = getScheduleWeekAndDay(dateStr);
     if (!week || !day) return null;
@@ -20,10 +26,22 @@ export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occ
 
     const daySessions = occurrences.filter(occurrence => occurrence.dateStr === dateStr);
 
-    daySessions.sort((a, b) => {
-      const timeA = parseInt(a.time.split(':')[0]) || 0;
-      const timeB = parseInt(b.time.split(':')[0]) || 0;
-      return timeA - timeB;
+    // Sort ascending by time
+    daySessions.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
+
+    // Group by instructor
+    const instructorGroupsMap = new Map();
+    daySessions.forEach(session => {
+      const key = session.trainer || 'Unknown';
+      if (!instructorGroupsMap.has(key)) instructorGroupsMap.set(key, []);
+      instructorGroupsMap.get(key).push(session);
+    });
+
+    // Sort instructor groups by their earliest session time (ascending)
+    const instructorGroups = [...instructorGroupsMap.entries()].sort((a, b) => {
+      const earliestA = Math.min(...a[1].map(s => parseTimeToMinutes(s.time)));
+      const earliestB = Math.min(...b[1].map(s => parseTimeToMinutes(s.time)));
+      return earliestA - earliestB;
     });
 
     const targetDateStr = swap ? (swap.date1 === dateStr ? swap.date2 : swap.date1) : dateStr;
@@ -70,125 +88,200 @@ export default function ScheduleList({ selectedDates, getScheduleWeekAndDay, occ
           </div>
         ) : (
           <>
-            {/* Desktop Table View */}
+            {/* Desktop Table View - Grouped by Instructor */}
             <div className="table-container desktop-session-table">
-              <table className="session-table">
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Track</th>
-                    <th>Instructor</th>
-                    <th>Category</th>
-                    <th>Lab</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {daySessions.map((session, idx) => (
-                    <tr key={`${session.track}-${session.trainer}-${session.time}-${idx}`}>
-                      <td className="time-col" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                          <Clock size={14} style={{ color: 'var(--text-muted)' }} />
+              {instructorGroups.map(([instructor, sessions], gIdx) => (
+                <div key={gIdx} style={{ marginBottom: gIdx < instructorGroups.length - 1 ? '1rem' : 0 }}>
+                  {/* Instructor Group Header */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.5rem 0.75rem',
+                    backgroundColor: 'var(--accent-light)',
+                    borderRadius: '10px 10px 0 0',
+                    border: '1px solid var(--card-border)',
+                    borderBottom: 'none'
+                  }}>
+                    <span style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      color: 'var(--accent-color)'
+                    }}>
+                      <User size={15} />
+                      {instructor}
+                    </span>
+                    <span style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 600,
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--card-bg)',
+                      color: 'var(--text-muted)',
+                      border: '1px solid var(--card-border)'
+                    }}>
+                      {sessions.length} session{sessions.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+
+                  <table className="session-table" style={{ borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+                    <thead>
+                      <tr>
+                        <th>Time</th>
+                        <th>Track</th>
+                        <th>Category</th>
+                        <th>Lab</th>
+                        <th style={{ width: '80px' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sessions.map((session, idx) => (
+                        <tr key={`${session.track}-${session.trainer}-${session.time}-${idx}`}>
+                          <td className="time-col" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <Clock size={14} style={{ color: 'var(--text-muted)' }} />
+                              {session.time}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="badge badge-track">{session.track}</span>
+                          </td>
+                          <td>{session.category}</td>
+                          <td>
+                            <span className="badge badge-lab">
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <Monitor size={12} />
+                                {session.lab}
+                              </span>
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              {session.originalTrainer && session.originalTrainer !== session.trainer && (
+                                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
+                                  (ex: {session.originalTrainer})
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                style={{ padding: '0.25rem 0.4rem', borderRadius: '4px', fontSize: '0.65rem', minWidth: 'auto', height: '22px' }}
+                                onClick={() => onEditSession(session)}
+                                title="Replace Instructor for this session"
+                              >
+                                <RefreshCw size={10} />
+                                Replace
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+
+            {/* Mobile Session Cards View - Grouped by Instructor */}
+            <div className="mobile-session-list">
+              {instructorGroups.map(([instructor, sessions], gIdx) => (
+                <div key={gIdx} style={{ marginBottom: gIdx < instructorGroups.length - 1 ? '0.75rem' : 0 }}>
+                  {/* Mobile Instructor Header */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.5rem 0.75rem',
+                    backgroundColor: 'var(--accent-light)',
+                    borderRadius: '10px 10px 0 0',
+                    border: '1px solid var(--card-border)',
+                    borderBottom: 'none',
+                    marginBottom: '-1px'
+                  }}>
+                    <span style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      color: 'var(--accent-color)'
+                    }}>
+                      <User size={15} />
+                      {instructor}
+                    </span>
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 600,
+                      padding: '0.1rem 0.4rem',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--card-bg)',
+                      color: 'var(--text-muted)',
+                      border: '1px solid var(--card-border)'
+                    }}>
+                      {sessions.length}
+                    </span>
+                  </div>
+
+                  {sessions.map((session, idx) => (
+                    <div
+                      key={`${session.track}-${session.trainer}-${session.time}-${idx}`}
+                      className="mobile-session-card"
+                      style={{
+                        borderRadius: idx === sessions.length - 1 ? '0 0 10px 10px' : '0',
+                        borderTop: idx === 0 ? '1px solid var(--card-border)' : 'none'
+                      }}
+                    >
+                      <div className="mobile-session-card-header">
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                          <Clock size={16} style={{ color: 'var(--accent-color)' }} />
                           {session.time}
                         </span>
-                      </td>
-                      <td>
                         <span className="badge badge-track">{session.track}</span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span className="badge" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent-color)' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <User size={12} />
-                              {session.trainer}
-                            </span>
+                      </div>
+
+                      <div className="mobile-session-card-body">
+                        <div className="mobile-session-card-row">
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}>
+                            <User size={14} style={{ color: 'var(--accent-color)' }} />
+                            {session.trainer}
                           </span>
-                          {session.isOnVacation && (
-                            <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <span>🏖️ Vacation</span>
-                            </span>
-                          )}
-                          {session.originalTrainer && session.originalTrainer !== session.trainer && (
-                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
-                              (ex: {session.originalTrainer})
-                            </span>
-                          )}
+
                           <button
                             type="button"
                             className="btn btn-secondary"
-                            style={{ padding: '0.25rem 0.4rem', borderRadius: '4px', fontSize: '0.65rem', minWidth: 'auto', height: '22px' }}
+                            style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.7rem', height: '26px' }}
                             onClick={() => onEditSession(session)}
-                            title="Replace Instructor for this session"
                           >
-                            <RefreshCw size={10} />
+                            <RefreshCw size={12} />
                             Replace
                           </button>
                         </div>
-                      </td>
-                      <td>{session.category}</td>
-                      <td>
-                        <span className="badge badge-lab">
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                            <Monitor size={12} />
-                            {session.lab}
+
+                        {session.originalTrainer && session.originalTrainer !== session.trainer && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            Originally: {session.originalTrainer}
+                          </div>
+                        )}
+
+                        <div className="mobile-session-card-row" style={{ marginTop: '0.25rem' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            <Tag size={13} />
+                            {session.category}
                           </span>
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
 
-            {/* Mobile Session Cards View */}
-            <div className="mobile-session-list">
-              {daySessions.map((session, idx) => (
-                <div key={`${session.track}-${session.trainer}-${session.time}-${idx}`} className="mobile-session-card">
-                  <div className="mobile-session-card-header">
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                      <Clock size={16} style={{ color: 'var(--accent-color)' }} />
-                      {session.time}
-                    </span>
-                    <span className="badge badge-track">{session.track}</span>
-                  </div>
-
-                  <div className="mobile-session-card-body">
-                    <div className="mobile-session-card-row">
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}>
-                        <User size={14} style={{ color: 'var(--accent-color)' }} />
-                        {session.trainer}
-                      </span>
-
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.7rem', height: '26px' }}
-                        onClick={() => onEditSession(session)}
-                      >
-                        <RefreshCw size={12} />
-                        Replace
-                      </button>
-                    </div>
-
-                    {session.originalTrainer && session.originalTrainer !== session.trainer && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                        Originally: {session.originalTrainer}
+                          <span className="badge badge-lab">
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <Monitor size={12} />
+                              {session.lab}
+                            </span>
+                          </span>
+                        </div>
                       </div>
-                    )}
-
-                    <div className="mobile-session-card-row" style={{ marginTop: '0.25rem' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        <Tag size={13} />
-                        {session.category}
-                      </span>
-
-                      <span className="badge badge-lab">
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Monitor size={12} />
-                          {session.lab}
-                        </span>
-                      </span>
                     </div>
-                  </div>
+                  ))}
                 </div>
               ))}
             </div>

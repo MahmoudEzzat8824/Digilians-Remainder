@@ -216,59 +216,191 @@ export default function InteractiveCalendar({
 
     const sessions = getSessionsForDate(hoveredDate);
 
+    // Sort sessions ascending by time
+    const sortedSessions = [...sessions].sort((a, b) => {
+      const timeA = a.time.split(':').map(Number);
+      const timeB = b.time.split(':').map(Number);
+      return (timeA[0] * 60 + (timeA[1] || 0)) - (timeB[0] * 60 + (timeB[1] || 0));
+    });
+
+    // Group sessions by instructor
+    const instructorGroups = new Map();
+    sortedSessions.forEach(s => {
+      const key = s.trainer || 'Unknown';
+      if (!instructorGroups.has(key)) instructorGroups.set(key, []);
+      instructorGroups.get(key).push(s);
+    });
+
     return (
       <div>
-        <div style={{ borderBottom: '1px solid var(--card-border)', paddingBottom: '0.35rem', marginBottom: '0.5rem' }}>
-          <strong style={{ fontSize: '0.85rem', color: 'var(--text-main)', display: 'block' }}>{formattedDate} - {day}</strong>
-          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{week}</span>
+        {/* Header */}
+        <div style={{
+          borderBottom: '1px solid var(--card-border)',
+          paddingBottom: '0.5rem',
+          marginBottom: '0.6rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+            <strong style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>{formattedDate}</strong>
+            <span style={{
+              fontSize: '0.65rem',
+              fontWeight: 700,
+              padding: '0.15rem 0.4rem',
+              borderRadius: '6px',
+              backgroundColor: 'var(--accent-light)',
+              color: 'var(--accent-color)',
+              letterSpacing: '0.03em'
+            }}>{week}</span>
+          </div>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>{day}</span>
         </div>
 
         {dayOff && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--danger-color)', fontSize: '0.75rem', fontWeight: 600 }}>
-            <span>🏖️ Project Day Off: {dayOff.label}</span>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            padding: '0.4rem 0.5rem',
+            borderRadius: '8px',
+            backgroundColor: 'var(--danger-bg)',
+            border: '1px solid var(--danger-border)',
+            color: 'var(--danger-text)',
+            fontSize: '0.75rem',
+            fontWeight: 600
+          }}>
+            <span>🏖️</span>
+            <span>Day Off: {dayOff.label}</span>
           </div>
         )}
 
         {swap && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--success-color)', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-            <span>🔄 Swapped with {swappedWithFormatted}</span>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            padding: '0.4rem 0.5rem',
+            borderRadius: '8px',
+            backgroundColor: 'var(--success-bg)',
+            border: '1px solid var(--success-border)',
+            color: 'var(--success-text)',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            marginBottom: '0.35rem'
+          }}>
+            <span>🔄</span>
+            <span>Swapped with {swappedWithFormatted}</span>
           </div>
         )}
 
         {!dayOff && sessions.length === 0 && (
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-            {day === 'Thursday' || day === 'Friday' ? "Weekend rest day" : "No scheduled sessions"}
+          <div style={{
+            fontSize: '0.75rem',
+            color: 'var(--text-muted)',
+            fontStyle: 'italic',
+            padding: '0.5rem 0',
+            textAlign: 'center'
+          }}>
+            {day === 'Thursday' || day === 'Friday' ? "🌴 Weekend rest day" : "No scheduled sessions"}
           </div>
         )}
 
         {!dayOff && sessions.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-              Scheduled Sessions ({sessions.length}):
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {/* Total sessions badge */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '0.15rem'
+            }}>
+              <span style={{
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
+                letterSpacing: '0.04em'
+              }}>
+                Sessions
+              </span>
+              <span style={{
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                padding: '0.1rem 0.35rem',
+                borderRadius: '4px',
+                backgroundColor: 'var(--accent-light)',
+                color: 'var(--accent-color)'
+              }}>
+                {sessions.length} total · {instructorGroups.size} instructor{instructorGroups.size > 1 ? 's' : ''}
+              </span>
             </div>
-            {sessions.map((s, idx) => {
-              const colorClass = trackColors[s.track] || 'track-default';
-              return (
-                <div key={idx} style={{
+
+            {/* Instructor groups */}
+            {[...instructorGroups.entries()].map(([instructor, instrSessions], gIdx) => (
+              <div key={gIdx} style={{
+                borderRadius: '8px',
+                border: '1px solid var(--card-border)',
+                overflow: 'hidden'
+              }}>
+                {/* Instructor header */}
+                <div style={{
                   display: 'flex',
-                  flexDirection: 'column',
-                  padding: '0.35rem',
-                  backgroundColor: 'var(--scrollbar-track)',
-                  borderRadius: '6px',
-                  borderLeft: '3px solid var(--accent-color)',
-                  fontSize: '0.75rem',
-                  lineHeight: 1.2
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.4rem',
+                  padding: '0.35rem 0.5rem',
+                  backgroundColor: 'var(--accent-light)',
+                  borderBottom: '1px solid var(--card-border)'
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: 'var(--text-main)', gap: '0.5rem' }}>
-                    <span>{s.time}</span>
-                    <span className={`badge ${colorClass}`} style={{ fontSize: '0.6rem', padding: '0.05rem 0.25rem', height: '16px' }}>{s.track}</span>
-                  </div>
-                  <div style={{ color: 'var(--text-muted)', marginTop: '0.15rem', fontSize: '0.7rem' }}>
-                    👤 {s.trainer} | 🏢 {s.lab}
-                  </div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    👤 {instructor}
+                  </span>
+                  <span style={{
+                    fontSize: '0.6rem',
+                    fontWeight: 600,
+                    padding: '0.05rem 0.25rem',
+                    borderRadius: '4px',
+                    backgroundColor: 'var(--card-bg)',
+                    color: 'var(--text-muted)',
+                    border: '1px solid var(--card-border)'
+                  }}>
+                    {instrSessions.length}
+                  </span>
                 </div>
-              );
-            })}
+
+                {/* Sessions list */}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {instrSessions.map((s, sIdx) => {
+                    const colorClass = trackColors[s.track] || 'track-default';
+                    return (
+                      <div key={sIdx} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.4rem',
+                        padding: '0.3rem 0.5rem',
+                        fontSize: '0.72rem',
+                        borderBottom: sIdx < instrSessions.length - 1 ? '1px solid var(--card-border)' : 'none',
+                        backgroundColor: sIdx % 2 === 0 ? 'transparent' : 'var(--scrollbar-track)'
+                      }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', minWidth: '70px' }}>
+                          🕐 {s.time}
+                        </span>
+                        <span className={`badge ${colorClass}`} style={{
+                          fontSize: '0.58rem',
+                          padding: '0.05rem 0.2rem',
+                          height: '15px',
+                          lineHeight: '15px'
+                        }}>
+                          {s.track}
+                        </span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                          🏢 {s.lab}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -359,6 +491,33 @@ export default function InteractiveCalendar({
             style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem' }}
             onClick={() => {
               const now = new Date();
+              // Find the most recent Saturday (day 6). If today is Saturday, use today.
+              const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+              const diffToSat = dayOfWeek >= 6 ? 0 : dayOfWeek + 1; // days back to Saturday
+              const saturday = new Date(now);
+              saturday.setDate(now.getDate() - diffToSat);
+              const friday = new Date(saturday);
+              friday.setDate(saturday.getDate() + 6); // Saturday + 6 = Friday
+              const fromStr = `${saturday.getFullYear()}-${String(saturday.getMonth() + 1).padStart(2, '0')}-${String(saturday.getDate()).padStart(2, '0')}`;
+              const toStr = `${friday.getFullYear()}-${String(friday.getMonth() + 1).padStart(2, '0')}-${String(friday.getDate()).padStart(2, '0')}`;
+              setCurrentYear(saturday.getFullYear());
+              setCurrentMonth(saturday.getMonth());
+              setFilters(prev => ({
+                ...prev,
+                dateMode: 'range',
+                fromDate: fromStr,
+                toDate: toStr
+              }));
+            }}
+          >
+            This Week
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem' }}
+            onClick={() => {
+              const now = new Date();
               const end = new Date();
               end.setDate(now.getDate() + 6);
               const fromStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -373,7 +532,7 @@ export default function InteractiveCalendar({
               }));
             }}
           >
-            This Week
+            7 Days
           </button>
           <button type="button" className="btn btn-secondary" style={{ padding: '0.4rem', minWidth: 'auto' }} onClick={handleNextMonth}>
             <ChevronRight size={16} />
