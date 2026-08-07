@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Mail, Plus, AlertCircle, RefreshCw, Copy, Check, MessageCircle } from 'lucide-react';
+import { RefreshCw, Copy, Check, MessageCircle } from 'lucide-react';
 
-export default function ReminderPanel({ occurrences, instructorEmailMap, getInstructorEmail, onComposeEmail, onEditSession, buildEmailText, buildWhatsAppText }) {
+export default function ReminderPanel({ occurrences, onPreviewWhatsApp, onSendWhatsApp, onEditSession, buildWhatsAppText }) {
   const [copiedId, setCopiedId] = useState(null); // tracks which card was copied
 
   const grouped = React.useMemo(() => {
@@ -17,7 +17,6 @@ export default function ReminderPanel({ occurrences, instructorEmailMap, getInst
 
     return [...groupedMap.entries()].map(([instructor, sessions]) => ({
       instructor,
-      email: getInstructorEmail(instructor),
       sessions: sessions.sort((a, b) => {
         const dateA = a.dateStr.localeCompare(b.dateStr);
         if (dateA !== 0) return dateA;
@@ -29,23 +28,7 @@ export default function ReminderPanel({ occurrences, instructorEmailMap, getInst
         return minutesA - minutesB;
       })
     }));
-  }, [occurrences, instructorEmailMap, getInstructorEmail]);
-
-  const handleComposeEmail = (group) => {
-    onComposeEmail(group.instructor, group.sessions, group.email);
-  };
-
-  const handleCopyEmail = async (group) => {
-    if (!buildEmailText) return;
-    try {
-      const text = buildEmailText(group.instructor, group.sessions);
-      await navigator.clipboard.writeText(text);
-      setCopiedId(`email-${group.instructor}`);
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
+  }, [occurrences]);
 
   const handleCopyWhatsApp = async (group) => {
     if (!buildWhatsAppText) return;
@@ -60,16 +43,19 @@ export default function ReminderPanel({ occurrences, instructorEmailMap, getInst
   };
 
   const handleSendWhatsApp = (group) => {
-    if (!buildWhatsAppText) return;
-    const text = buildWhatsAppText(group.instructor, group.sessions);
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    if (!onSendWhatsApp) return;
+    onSendWhatsApp(group.instructor, group.sessions, 'Reminder card');
+  };
+
+  const handlePreviewWhatsApp = (group) => {
+    if (!onPreviewWhatsApp) return;
+    onPreviewWhatsApp(group.instructor, group.sessions);
   };
 
   return (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-        <h2>Email Reminders</h2>
+        <h2>WhatsApp Reminders</h2>
         <span className="badge badge-track">{grouped.length} Instructor{grouped.length === 1 ? '' : 's'}</span>
       </div>
 
@@ -84,35 +70,19 @@ export default function ReminderPanel({ occurrences, instructorEmailMap, getInst
               <div className="reminder-card-header">
                 <div>
                   <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>{group.instructor}</h3>
-                  {group.email ? (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', wordBreak: 'break-all' }}>
-                      {group.email}
-                    </span>
-                  ) : (
-                    <span className="badge badge-danger" style={{ padding: '0.1rem 0.35rem', fontSize: '0.65rem', marginTop: '0.2rem', gap: '0.2rem' }}>
-                      <AlertCircle size={10} />
-                      Email Missing
-                    </span>
-                  )}
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                    WhatsApp reminders only
+                  </span>
                 </div>
                 
                 <button
                   type="button"
-                  className={`btn ${group.email ? 'btn-primary' : 'btn-secondary'}`}
+                  className="btn btn-primary"
                   style={{ padding: '0.4rem 0.75rem', fontSize: '0.75rem' }}
-                  onClick={() => handleComposeEmail(group)}
+                  onClick={() => handlePreviewWhatsApp(group)}
                 >
-                  {group.email ? (
-                    <>
-                      <Mail size={12} />
-                      Compose Email
-                    </>
-                  ) : (
-                    <>
-                      <Plus size={12} />
-                      Missing Email
-                    </>
-                  )}
+                  <MessageCircle size={12} />
+                  Preview WhatsApp
                 </button>
               </div>
 
@@ -125,29 +95,6 @@ export default function ReminderPanel({ occurrences, instructorEmailMap, getInst
                 borderBottom: '1px solid var(--card-border)',
                 marginBottom: '0.5rem'
               }}>
-                {/* Copy Email Text */}
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{
-                    padding: '0.3rem 0.6rem',
-                    fontSize: '0.7rem',
-                    height: '28px',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem'
-                  }}
-                  onClick={() => handleCopyEmail(group)}
-                  title="Copy email text to clipboard"
-                >
-                  {copiedId === `email-${group.instructor}` ? (
-                    <><Check size={11} style={{ color: 'var(--success-color)' }} /> Copied!</>
-                  ) : (
-                    <><Copy size={11} /> Copy Email</>
-                  )}
-                </button>
-
                 {/* Copy WhatsApp Text */}
                 <button
                   type="button"

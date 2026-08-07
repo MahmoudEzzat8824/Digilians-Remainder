@@ -70,7 +70,11 @@ body {
   line-height: 1.5;
   transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-y: scroll;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* Custom Scrollbar */
@@ -94,6 +98,74 @@ body {
   max-width: 1400px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+}
+
+.whatsapp-log-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.whatsapp-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.whatsapp-log-header p {
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.whatsapp-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.whatsapp-log-item {
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--scrollbar-track);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.whatsapp-log-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.whatsapp-log-item-top strong {
+  font-size: 0.95rem;
+}
+
+.whatsapp-log-item-top span,
+.whatsapp-log-item-meta,
+.whatsapp-log-item-range {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.whatsapp-log-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.85rem;
+}
+
+.whatsapp-log-item-range {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.mobile-quick-actions {
+  display: none;
 }
 
 /* Cards with Glassmorphism */
@@ -883,6 +955,11 @@ html.dark .track-innov-prompt {
 @media (max-width: 768px) {
   .app-container {
     padding: 1rem 0.75rem;
+    padding-bottom: 6rem;
+  }
+
+  .input-control {
+    font-size: 16px;
   }
 
   h1 {
@@ -1021,6 +1098,54 @@ html.dark .track-innov-prompt {
   .toast {
     width: 100%;
     justify-content: center;
+  }
+
+  .whatsapp-log-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .whatsapp-log-item-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .mobile-quick-actions {
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    z-index: 2500;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  html.dark .mobile-quick-actions {
+    background: rgba(9, 9, 11, 0.84);
+  }
+
+  .mobile-quick-action-btn {
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    background: var(--input-bg);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    min-height: 42px;
+    padding: 0.45rem 0.35rem;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 

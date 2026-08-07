@@ -17,8 +17,6 @@ const sheets = {
   'Media Production': '1tUOF04wcALeT-bucRy7Z3lPdcmsRkXzU'
 };
 
-const contactsSheetId = '1zIYPqJZN-6uv6L9tAmDro_g1zC2f9IreHu9aOHlIrCQ';
-
 // Helper date utilities
 function formatDateForInput(date) {
   const tzOffset = date.getTimezoneOffset() * 60000;
@@ -31,10 +29,6 @@ function getTodayValue() {
 
 function normalizeText(value) {
   return String(value || '').trim().toLowerCase();
-}
-
-function normalizeHeader(value) {
-  return normalizeText(value).replace(/[^a-z0-9]+/g, ' ');
 }
 
 // Week projection logic starting from reference Saturday, July 4, 2026
@@ -73,6 +67,43 @@ function getDatesInRange(fromDateStr, toDateStr) {
   return dates;
 }
 
+function formatDateLabel(dateStr) {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+}
+
+function getDeviceBrowserLabel() {
+  const ua = navigator.userAgent || '';
+  const platform = navigator.userAgentData?.platform || navigator.platform || '';
+
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(ua);
+  const isWindows = /Win/.test(platform) || /Windows/.test(ua);
+  const isMac = /Mac/.test(platform) || /Mac OS X/.test(ua);
+  const isLinux = /Linux/.test(platform) || /Linux/.test(ua);
+
+  let device = 'Unknown device';
+  if (isIOS) device = 'iPhone/iPad';
+  else if (isAndroid) device = 'Android';
+  else if (isWindows) device = 'Windows';
+  else if (isMac) device = 'Mac';
+  else if (isLinux) device = 'Linux';
+
+  let browser = 'Browser';
+  if (/Edg/i.test(ua)) browser = 'Edge';
+  else if (/CriOS/i.test(ua) || (/Chrome/i.test(ua) && !/Edg|OPR|Opera/i.test(ua))) browser = 'Chrome';
+  else if (/FxiOS/i.test(ua) || /Firefox/i.test(ua)) browser = 'Firefox';
+  else if (/OPiOS|Opera/i.test(ua)) browser = 'Opera';
+  else if (/Safari/i.test(ua) && !/Chrome|CriOS|Edg|OPR|Opera|FxiOS/i.test(ua)) browser = 'Safari';
+
+  return `${browser} on ${device}`;
+}
+
 export default function App() {
   const [allSessions, setAllSessions] = useState([]);
   const [daysOff, setDaysOff] = useState(() => {
@@ -89,22 +120,18 @@ export default function App() {
       return [];
     }
   });
-  const [instructorEmailMap, setInstructorEmailMap] = useState({
-    'Ahlam Waleed': 'A7lam.waleed@gmail.com',
-    'Ahmed madeh': 'eng.a.madeh@gmail.com',
-    'Gehad Waheed': 'gehadwaheed42@gmail.com',
-    'Haidy Seada': 'Haidyraafatseada5@gmail.com',
-    'Hosam Ashraf': 'hosh25006@gmail.com',
-    'Mahmoud Ramadan': 'mahmoudex732@gmail.com',
-    'Mavie Ahmed': 'mavieahmedkhattab@gmail.com',
-    'Mohamed Azzam': 'devazzam001@gmail.com',
-    'Mohamed Edriss': 'mohamedkhaledidris@gmail.com'
-  });
   const [isLoading, setIsLoading] = useState(true);
   const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [lastUpdated, setLastUpdated] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [whatsappSendLog, setWhatsappSendLog] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('digilians_whatsapp_log') || '[]');
+    } catch {
+      return [];
+    }
+  });
 
   // Toast notifications
   const [toasts, setToasts] = useState([]);
@@ -115,7 +142,7 @@ export default function App() {
   };
 
   // Modals state
-  const [activePreviewEmail, setActivePreviewEmail] = useState(null);
+  const [activePreviewMessage, setActivePreviewMessage] = useState(null);
   const [activeEditSession, setActiveEditSession] = useState(null);
 
   // Theme State
@@ -160,6 +187,10 @@ export default function App() {
     localStorage.setItem('digilians_swapped', JSON.stringify(swappedDays));
   }, [swappedDays]);
 
+  useEffect(() => {
+    localStorage.setItem('digilians_whatsapp_log', JSON.stringify(whatsappSendLog));
+  }, [whatsappSendLog]);
+
   const handleAddDayOff = (newDayOff) => {
     setDaysOff(prev => [...prev, { ...newDayOff, id: Date.now().toString() }]);
     addToast(`Day off "${newDayOff.label || 'Day Off'}" added successfully`);
@@ -186,6 +217,48 @@ export default function App() {
   const handleDeleteSwap = (id) => {
     setSwappedDays(prev => prev.filter(s => s.id !== id));
     addToast('Day swap removed', 'info');
+  };
+
+  const recordWhatsAppSend = (instructorName, sessions, source) => {
+    const uniqueDates = [...new Set((sessions || []).map(session => session.dateStr).filter(Boolean))].sort();
+    const dateLabels = uniqueDates.map(formatDateLabel);
+    const dateRangeLabel = dateLabels.length > 1
+      ? `${dateLabels[0]} - ${dateLabels[dateLabels.length - 1]}`
+      : dateLabels[0] || 'No date';
+
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      instructorName,
+      sessionCount: sessions?.length || 0,
+      dateRangeLabel,
+      sentAt: new Date().toISOString(),
+      source,
+      deviceLabel: getDeviceBrowserLabel()
+    };
+
+    setWhatsappSendLog(prev => [entry, ...prev].slice(0, 25));
+    addToast(`Logged WhatsApp reminder for ${instructorName}`, 'info');
+  };
+
+  const handleSendWhatsApp = (instructorName, sessions, source = 'Reminder card') => {
+    if (!buildWhatsAppText) return;
+    const text = buildWhatsAppText(instructorName, sessions);
+    recordWhatsAppSend(instructorName, sessions, source);
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleScrollToSection = (sectionId) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const clearWhatsAppLog = () => {
+    setWhatsappSendLog([]);
+    localStorage.removeItem('digilians_whatsapp_log');
+    addToast('WhatsApp log cleared', 'info');
   };
 
   // Get full list of instructors across all loaded sessions
@@ -245,18 +318,6 @@ export default function App() {
     const newUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ''}`;
     window.history.replaceState({}, '', newUrl);
   }, [filters]);
-
-  // Dynamic lookup function for instructor emails
-  const getInstructorEmail = React.useCallback((name) => {
-    if (!name) return '';
-    const normalized = normalizeText(name);
-    for (const [key, email] of Object.entries(instructorEmailMap)) {
-      if (normalizeText(key) === normalized) {
-        return email;
-      }
-    }
-    return '';
-  }, [instructorEmailMap]);
 
   // Parser helper function for schedules
   const parseToSessions = (rows, trackName = "Local Upload") => {
@@ -350,7 +411,7 @@ export default function App() {
     setRefreshKey(k => k + 1);
   }, []);
 
-  // Fetch all schedules and trainer emails dynamically
+  // Fetch all schedules dynamically
   // Re-runs on mount and every 5 minutes (REFRESH_INTERVAL_MS), or when refreshKey changes
   const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -363,50 +424,7 @@ export default function App() {
       else setIsBackgroundRefreshing(true);
       setErrorMsg('');
       try {
-        // 1. Fetch trainer emails from Google Sheet first
-        const emailsMap = { ...instructorEmailMap };
-        try {
-          const emailUrl = `https://docs.google.com/spreadsheets/d/${contactsSheetId}/export?format=csv`;
-          const emailRes = await fetch(emailUrl);
-          if (emailRes.ok) {
-            const csvText = await emailRes.text();
-            const workbook = XLSX.read(csvText, { type: 'string' });
-            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-            if (rows && rows.length > 0) {
-              const headerRow = rows[0] || [];
-              const normalizedHeaders = headerRow.map(normalizeHeader);
-              const emailIndex = normalizedHeaders.findIndex(h => h.includes('email') || h.includes('mail'));
-              const keyIndexCandidates = ['instructor', 'trainer', 'name', 'full name', 'number', 'id'];
-
-              let keyIndex = keyIndexCandidates
-                .map(candidate => normalizedHeaders.findIndex(h => h === candidate || h.includes(candidate)))
-                .find(index => index >= 0);
-
-              if (keyIndex === undefined || keyIndex < 0) keyIndex = 0;
-
-              if (emailIndex >= 0) {
-                for (let r = 1; r < rows.length; r++) {
-                  const row = rows[r] || [];
-                  const nameKey = String(row[keyIndex] || '').trim();
-                  const emailVal = String(row[emailIndex] || '').trim();
-                  if (nameKey && emailVal) {
-                    emailsMap[nameKey] = emailVal;
-                    emailsMap[normalizeText(nameKey)] = emailVal;
-                  }
-                }
-              }
-            }
-          }
-        } catch (emailErr) {
-          console.error("Failed to load trainer emails from Google Sheet, falling back to defaults:", emailErr);
-        }
-
-        if (!active) return;
-        setInstructorEmailMap(emailsMap);
-
-        // 2. Fetch schedules sheets in parallel
+        // Fetch schedules sheets in parallel
         const fetchPromises = Object.entries(sheets).map(async ([trackName, sheetId]) => {
           const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=xlsx`;
           const res = await fetch(url);
@@ -687,15 +705,6 @@ export default function App() {
     addToast(`Instructor replaced with ${newInstructorName}`);
   };
 
-  const buildEmailText = (instructorName, sessions) => {
-    const lines = sessions.map(session => {
-      return `${session.formattedDate} (${session.day}) - ${session.time} | ${session.track} | ${session.lab} | ${session.category}`;
-    });
-    const intro = `Hello ${instructorName},\n\nThis is a reminder of your upcoming sessions:\n\n`;
-    const outro = `\n\nplease make sure you come before the session by a good time\n\nBest regards,`;
-    return intro + lines.join('\n') + outro;
-  };
-
   const buildWhatsAppText = (instructorName, sessions) => {
     // Group sessions by date for better readability
     const dateGroups = new Map();
@@ -725,17 +734,18 @@ export default function App() {
     return text;
   };
 
-  const handleComposeEmailClick = (instructorName, sessions, emailAddress) => {
-    const subject = `Reminder: Upcoming sessions for ${instructorName}`;
-    const body = buildEmailText(instructorName, sessions);
+  const handlePreviewWhatsAppClick = (instructorName, sessions) => {
     const whatsappBody = buildWhatsAppText(instructorName, sessions);
-    setActivePreviewEmail({
+    setActivePreviewMessage({
       instructorName,
-      to: emailAddress || '',
-      subject,
-      body,
+      sessions,
       whatsappBody
     });
+  };
+
+  const handleSendWhatsAppFromPreview = () => {
+    if (!activePreviewMessage) return;
+    handleSendWhatsApp(activePreviewMessage.instructorName, activePreviewMessage.sessions, 'Preview modal');
   };
 
   return (
@@ -781,32 +791,36 @@ export default function App() {
         </div>
       ) : (
         <>
-          <KpiCards occurrences={occurrences} instructorEmailMap={instructorEmailMap} />
+            <KpiCards occurrences={occurrences} />
 
-          <FilterPanel
-            filters={filters}
-            setFilters={setFilters}
-            tracks={filterOptions.tracks}
-            instructors={filterOptions.instructors}
-            labs={filterOptions.labs}
-            clearFilters={clearFilters}
-            exportCsv={exportCsv}
-            exportXlsx={exportXlsx}
-            handleFileUpload={handleFileUpload}
-          />
+          <section id="filters-section">
+            <FilterPanel
+              filters={filters}
+              setFilters={setFilters}
+              tracks={filterOptions.tracks}
+              instructors={filterOptions.instructors}
+              labs={filterOptions.labs}
+              clearFilters={clearFilters}
+              exportCsv={exportCsv}
+              exportXlsx={exportXlsx}
+              handleFileUpload={handleFileUpload}
+            />
+          </section>
 
-          <InteractiveCalendar
-            filters={filters}
-            setFilters={setFilters}
-            daysOff={daysOff}
-            onAddDayOff={handleAddDayOff}
-            onDeleteDayOff={handleDeleteDayOff}
-            swappedDays={swappedDays}
-            onAddSwap={handleAddSwap}
-            onDeleteSwap={handleDeleteSwap}
-            getSessionsForDate={getSessionsForDate}
-            getScheduleWeekAndDay={getScheduleWeekAndDay}
-          />
+          <section id="calendar-section">
+            <InteractiveCalendar
+              filters={filters}
+              setFilters={setFilters}
+              daysOff={daysOff}
+              onAddDayOff={handleAddDayOff}
+              onDeleteDayOff={handleDeleteDayOff}
+              swappedDays={swappedDays}
+              onAddSwap={handleAddSwap}
+              onDeleteSwap={handleDeleteSwap}
+              getSessionsForDate={getSessionsForDate}
+              getScheduleWeekAndDay={getScheduleWeekAndDay}
+            />
+          </section>
 
           <div className="card" style={{ padding: '0.75rem 1.25rem', marginBottom: '1.5rem', backgroundColor: 'var(--accent-light)', borderColor: 'var(--accent-color)', color: 'var(--accent-color)', fontWeight: 700, borderRadius: '12px' }}>
             {selectedDates.length === 1 ? (
@@ -817,24 +831,26 @@ export default function App() {
           </div>
 
           <div className="grid-content">
-            <ScheduleList
-              selectedDates={selectedDates}
-              getScheduleWeekAndDay={getScheduleWeekAndDay}
-              occurrences={occurrences}
-              onEditSession={setActiveEditSession}
-              swappedDays={swappedDays}
-            />
+            <section id="schedule-section">
+              <ScheduleList
+                selectedDates={selectedDates}
+                getScheduleWeekAndDay={getScheduleWeekAndDay}
+                occurrences={occurrences}
+                onEditSession={setActiveEditSession}
+                swappedDays={swappedDays}
+              />
+            </section>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <ReminderPanel
-                occurrences={occurrences}
-                instructorEmailMap={instructorEmailMap}
-                getInstructorEmail={getInstructorEmail}
-                onComposeEmail={handleComposeEmailClick}
-                onEditSession={setActiveEditSession}
-                buildEmailText={buildEmailText}
-                buildWhatsAppText={buildWhatsAppText}
-              />
+              <section id="reminders-section">
+                <ReminderPanel
+                  occurrences={occurrences}
+                  onPreviewWhatsApp={handlePreviewWhatsAppClick}
+                  onSendWhatsApp={handleSendWhatsApp}
+                  onEditSession={setActiveEditSession}
+                  buildWhatsAppText={buildWhatsAppText}
+                />
+              </section>
 
               <VacationSwapPanel
                 daysOff={daysOff}
@@ -844,13 +860,62 @@ export default function App() {
                 onAddSwap={handleAddSwap}
                 onDeleteSwap={handleDeleteSwap}
               />
+
+              <section id="whatsapp-log-section" className="card whatsapp-log-card">
+                <div className="whatsapp-log-header">
+                  <div>
+                    <h2>WhatsApp Send Log</h2>
+                    <p>Recent sends from this browser or device.</p>
+                  </div>
+                  <button type="button" className="btn btn-secondary" onClick={clearWhatsAppLog} disabled={whatsappSendLog.length === 0}>
+                    Clear Log
+                  </button>
+                </div>
+
+                {whatsappSendLog.length === 0 ? (
+                  <p className="placeholder-text" style={{ padding: '1.5rem 1rem', marginBottom: 0 }}>
+                    No WhatsApp reminders have been sent yet.
+                  </p>
+                ) : (
+                  <div className="whatsapp-log-list">
+                    {whatsappSendLog.map(entry => {
+                      const sentAt = new Date(entry.sentAt);
+                      const sentDate = sentAt.toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                      });
+                      const sentTime = sentAt.toLocaleTimeString('en-GB', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      });
+
+                      return (
+                        <div key={entry.id} className="whatsapp-log-item">
+                          <div className="whatsapp-log-item-top">
+                            <strong>{entry.instructorName}</strong>
+                            <span>{entry.sessionCount} session{entry.sessionCount === 1 ? '' : 's'}</span>
+                          </div>
+                          <div className="whatsapp-log-item-meta">
+                            <span>Sent {sentDate} at {sentTime}</span>
+                            <span>{entry.source}</span>
+                            <span>{entry.deviceLabel}</span>
+                          </div>
+                          <div className="whatsapp-log-item-range">{entry.dateRangeLabel}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
             </div>
           </div>
 
-          {activePreviewEmail && (
+          {activePreviewMessage && (
             <EmailPreviewModal
-              emailData={activePreviewEmail}
-              onClose={() => setActivePreviewEmail(null)}
+              emailData={activePreviewMessage}
+              onSendWhatsApp={handleSendWhatsAppFromPreview}
+              onClose={() => setActivePreviewMessage(null)}
             />
           )}
 
@@ -871,6 +936,21 @@ export default function App() {
               </div>
             ))}
           </div>
+
+          <nav className="mobile-quick-actions" aria-label="Quick actions">
+            <button type="button" className="mobile-quick-action-btn" onClick={() => handleScrollToSection('filters-section')}>
+              Filters
+            </button>
+            <button type="button" className="mobile-quick-action-btn" onClick={() => handleScrollToSection('calendar-section')}>
+              Calendar
+            </button>
+            <button type="button" className="mobile-quick-action-btn" onClick={() => handleScrollToSection('reminders-section')}>
+              Reminders
+            </button>
+            <button type="button" className="mobile-quick-action-btn" onClick={() => handleScrollToSection('whatsapp-log-section')}>
+              Send Log
+            </button>
+          </nav>
         </>
       )}
     </div>

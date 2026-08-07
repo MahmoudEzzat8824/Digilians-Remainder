@@ -1,18 +1,13 @@
 import React from 'react';
-import { BookOpen, Users, Bell, Layers } from 'lucide-react';
+import { BookOpen, Users, Layers } from 'lucide-react';
 
-export default function KpiCards({ occurrences, instructorEmailMap }) {
+export default function KpiCards({ occurrences }) {
   const totalSessions = occurrences.length;
   
   const activeTracks = [...new Set(occurrences.map(s => s.track))].filter(Boolean).length;
   
   const instructors = [...new Set(occurrences.map(s => s.trainer))].filter(Boolean);
   const totalInstructors = instructors.length;
-
-  const instructorsWithNoEmail = instructors.filter(inst => {
-    const email = instructorEmailMap[inst] || instructorEmailMap[inst.trim().toLowerCase()] || '';
-    return !email;
-  }).length;
 
   return (
     <div className="grid-kpi">
@@ -46,18 +41,6 @@ export default function KpiCards({ occurrences, instructorEmailMap }) {
         </div>
       </div>
 
-      <div className="card kpi-card">
-        <div className="kpi-icon-wrapper" style={{ 
-          backgroundColor: instructorsWithNoEmail > 0 ? 'var(--danger-bg)' : 'var(--success-bg)', 
-          color: instructorsWithNoEmail > 0 ? 'var(--danger-color)' : 'var(--success-color)' 
-        }}>
-          <Bell size={22} />
-        </div>
-        <div>
-          <div className="kpi-title">Missing Emails</div>
-          <div className="kpi-value">{instructorsWithNoEmail}</div>
-        </div>
-      </div>
     </div>
   );
 }
