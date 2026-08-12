@@ -12,7 +12,6 @@ import ReplaceInstructorModal from './components/ReplaceInstructorModal';
 
 // Track Sheet IDs
 const sheets = {
-  'Coaching': '1Bius1WfZY3TZN0lIKgq95lAR9WnZyCBiCg7M6CAy4k0',
   'Data Analysis': '1P5Cxi9tzINtsVph8fFXMyVdayVj3i1Tx',
   'Media Production': '1tUOF04wcALeT-bucRy7Z3lPdcmsRkXzU'
 };
